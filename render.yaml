@@ -1,0 +1,17 @@
+# Render Blueprint 配置 —— 股票记账多端同步后端
+# 用法：把整个 stock-ledger 目录推到 GitHub，在 Render 选 "New +" → "Blueprint" → 选该仓库即可。
+# 部署后 Render 会自动分配一个公网地址（如 https://stock-ledger-sync.onrender.com）。
+services:
+  - type: web
+    name: stock-ledger-sync
+    runtime: node
+    plan: free
+    region: oregon          # 可选：oregon / frankfurt / singapore
+    branch: main            # 你的默认分支名（若是 master 请改）
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    healthCheckPath: "/"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # PORT 由 Render 自动注入，无需手动设置
