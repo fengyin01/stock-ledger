@@ -7,7 +7,7 @@ services:
     runtime: node
     plan: free
     region: oregon          # 可选：oregon / frankfurt / singapore
-    branch: main            # 你的默认分支名（若是 master 请改）
+    branch: master          # 与 GitHub 仓库默认分支一致
     buildCommand: "npm install"
     startCommand: "node server.js"
     healthCheckPath: "/"
