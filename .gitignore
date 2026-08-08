@@ -1,0 +1,5 @@
+# Render / 部署相关忽略项
+.sync-data/
+node_modules/
+npm-debug.log*
+.DS_Store
