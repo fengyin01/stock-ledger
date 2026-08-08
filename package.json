@@ -1,0 +1,13 @@
+{
+  "name": "stock-ledger",
+  "version": "1.0.0",
+  "description": "慢慢变富 · 股票记账（含多端实时同步后端）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "private": true
+}
