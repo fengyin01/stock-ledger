@@ -29832,7 +29832,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": 1.4958863126
+          "divYield": null
         },
         {
           "ps": 0.3,
@@ -29842,7 +29842,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": null
+          "divYield": 0.7479431563
         },
         {
           "ps": 0.5,
