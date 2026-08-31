@@ -68,11 +68,86 @@ function sendJSON(res, code, obj) {
   res.end(body);
 }
 
+// ---------- 分红预测数据代理 ----------
+// 上游 API（慢慢变富后端）存在 CORS 白名单，仅放行 www.manmanbianfu.top；
+// 本服务端转发时伪造该 Origin，前端以同源 /api/div/stockPrice 访问即可。
+const DIV_API = "https://vercel-dividend-d8faqegf03442b6c.service.tcloudbase.com/stockPrice";
+function proxyDiv(req, res, url) {
+  const target = DIV_API + (url.search || "");
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 25000) : null;
+  const doFetch = typeof fetch === "function"
+    ? () => fetch(target, {
+        headers: {
+          "Origin": "https://www.manmanbianfu.top",
+          "Referer": "https://www.manmanbianfu.top/",
+          "User-Agent": req.headers["user-agent"] || "Mozilla/5.0",
+          "Accept": req.headers["accept"] || "*/*"
+        },
+        signal: controller ? controller.signal : undefined
+      })
+    : null;
+  if (!doFetch) { res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "proxy unavailable" })); return; }
+  doFetch()
+    .then(async (up) => {
+      if (timer) clearTimeout(timer);
+      const buf = Buffer.from(await up.arrayBuffer());
+      res.writeHead(up.status, {
+        "Content-Type": up.headers.get("content-type") || "application/octet-stream",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store"
+      });
+      res.end(buf);
+    })
+    .catch(() => {
+      if (timer) clearTimeout(timer);
+      res.writeHead(502, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+      res.end(JSON.stringify({ error: "upstream unavailable" }));
+    });
+}
+
+// ---------- 分红预测点赞计数（自建持久化，种子与参考站当前值对齐）----------
+const LIKE_FILE = path.join(DATA_DIR, "likes.json");
+const LIKE_SEED = 17; // 2026-08-31 参考站当前点赞数
+function loadLikes() {
+  try {
+    const o = JSON.parse(fs.readFileSync(LIKE_FILE, "utf8"));
+    return typeof o.dividendForecastCount === "number" ? o.dividendForecastCount : LIKE_SEED;
+  } catch { return LIKE_SEED; }
+}
+let divLikes = loadLikes();
+function persistLikes() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(LIKE_FILE, JSON.stringify({ dividendForecastCount: divLikes, updatedAt: Date.now() }));
+  } catch (e) { console.error("persistLikes error:", e.message); }
+}
+
 const server = http.createServer((req, res) => {
   // CORS 预检
   if (req.method === "OPTIONS") { sendJSON(res, 204, {}); return; }
 
   const url = new URL(req.url, "http://localhost");
+
+  // 分红预测数据代理（GET）
+  if (req.method === "GET" && url.pathname === "/api/div/stockPrice") {
+    proxyDiv(req, res, url);
+    return;
+  }
+
+  // 分红预测点赞计数
+  if (url.pathname === "/api/div/like") {
+    if (req.method === "GET") { sendJSON(res, 200, { dividendForecastCount: divLikes }); return; }
+    if (req.method === "POST") {
+      divLikes += 1;
+      persistLikes();
+      sendJSON(res, 200, { dividendForecastCount: divLikes });
+      return;
+    }
+    sendJSON(res, 405, { error: "method not allowed" });
+    return;
+  }
+
   const m = url.pathname.match(/^\/api\/([^/]+)\/sync$/);
   if (m) {
     const roomId = decodeURIComponent(m[1]);
@@ -105,6 +180,12 @@ const server = http.createServer((req, res) => {
     }
     sendJSON(res, 405, { error: "method not allowed" });
     return;
+  }
+
+  // 已下线页面显式 404（沙箱增量部署不清理远端旧文件）
+  if (url.pathname === "/sectors.html") {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Not found"); return;
   }
 
   // 静态文件托管

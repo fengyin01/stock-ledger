@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>慢慢变富 · 分红预测</title>
+<style>
+  :root {
+    --primary: #E03025;
+    --primary-soft: #fff0f0;
+    --up: #E03025;
+    --down: #16a34a;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font); background: #f5f6f8; color: var(--text);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    padding-bottom: 120px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(255,255,255,.9); backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 1460px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
+  .brand-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, #E03025, #f0654f); color: #fff;
+    display: grid; place-items: center; font-size: 15px; box-shadow: var(--shadow);
+  }
+  .brand a { text-decoration: none; color: inherit; }
+
+  /* ---- Bottom navigation ---- */
+  .bottom-nav {
+    box-sizing: border-box;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #fff; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around; align-items: flex-start;
+  }
+  .bottom-nav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 56px; gap: 3px; color: var(--text-3); text-decoration: none; font-size: 11px;
+    -webkit-tap-highlight-color: transparent; transition: color .15s;
+  }
+  .bottom-nav a.active { color: var(--primary); font-weight: 600; }
+  .bottom-nav svg {
+    width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s;
+  }
+  .bottom-nav a .icon-fill { fill: currentColor; stroke: none; }
+  @media (max-width: 360px) {
+    .bottom-nav a { font-size: 10px; }
+    .bottom-nav svg { width: 20px; height: 20px; }
+  }
+</style>
+<link rel="stylesheet" href="forecast.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-icon">富</div>
+      <a href="index.html"><span>慢慢变富</span></a>
+    </div>
+  </div>
+</div>
+
+<main class="forecast-page">
+  <div class="forecast-shell">
+
+    <div class="forecast-toolbar">
+      <button type="button" class="forecast-back" id="btnBack">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.75 4.25 6 10l5.75 5.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回网格页
+      </button>
+      <span class="forecast-live"><i></i> 实时数据</span>
+    </div>
+
+    <header class="forecast-heading">
+      <p class="forecast-kicker">DIVIDEND FORECAST · 2026E</p>
+      <div class="forecast-heading-title">
+        <h1>分红预测引擎</h1>
+        <button type="button" class="forecast-like" id="btnLike" aria-pressed="false" aria-label="点赞">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 10v10H4V10h3Zm0 10h9.6a2 2 0 0 0 1.94-1.5l1.2-4.5A2 2 0 0 0 17.8 11H14l.45-3.1A2.4 2.4 0 0 0 12.08 5L7 10Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="likeCount">…</span>
+        </button>
+      </div>
+      <p>用中报利润、三年季节性、常规派息率和权益股本，生成可追溯的全年每股股息预测。</p>
+      <section class="forecast-risk">
+        <b>⚠️ 风险提示</b>
+        <span>本页为基于已披露财报、历史分红与中期息的模型估算，不代表公司分红承诺。利润、派息率、股本及分红方案均可能变化；股价波动也会改变预期股息率。仅供研究参考，不构成任何投资建议。</span>
+      </section>
+    </header>
+
+    <form class="forecast-search" id="searchForm">
+      <label for="forecast-code">证券代码 / 名称</label>
+      <input id="forecast-code" value="600941" maxlength="20" placeholder="输入 6 位代码或股票名称" autocomplete="off" />
+      <button type="submit" id="searchBtn">查询并计算</button>
+      <div class="forecast-examples">
+        <span>试试</span>
+        <button type="button" data-code="000423">东阿阿胶</button>
+        <button type="button" data-code="601318">中国平安</button>
+        <button type="button" data-code="600941">中国移动</button>
+        <button type="button" data-code="601728">中国电信</button>
+      </div>
+    </form>
+
+    <div class="forecast-rule">
+      <b>本页规则</b>
+      <span>以利润模型、中期息同比锚定和有效期内的量化分红承诺三条路径交叉校验，取全年每股股息较高的可审计下限；缺少任一核心输入即暂不覆盖。</span>
+    </div>
+
+    <section class="forecast-commitment-summary" id="commitmentSummary" style="display:none"></section>
+
+    <section class="forecast-sector-picker" id="sectorPicker"></section>
+
+    <section class="forecast-search-results" id="searchResults" style="display:none"></section>
+
+    <section class="forecast-error" id="forecastError" style="display:none"></section>
+
+    <div id="forecastResult"></div>
+
+    <section class="forecast-empty" id="forecastEmpty">
+      <b>输入代码，开始一次可追溯的预测</b>
+      <span>会同时核验中报利润、近三年季节性、派息率、股本、中期息和实时价格。</span>
+    </section>
+
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" class="icon-fill"><circle cx="12" cy="12" r="6"/></svg>
+    <span>持仓</span>
+  </a>
+  <a href="watchlist.html">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>自选</span>
+  </a>
+  <a href="returns.html">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>收益</span>
+  </a>
+  <a href="dividend-forecast.html" class="active">
+    <svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.7L19.5 10l-5.6 1.3L12 17l-1.9-5.7L4.5 10l5.6-1.3L12 3z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z"/></svg>
+    <span>分红预测</span>
+  </a>
+  <a href="news.html">
+    <svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/></svg>
+    <span>新闻</span>
+  </a>
+  <a href="calendar.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>日历</span>
+  </a>
+</nav>
+
+<script>
+/* ================= 工具 ================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = (l) => `${(l * 100).toFixed(2)}%`;
+const yi = (l) => `${(l / 1e8).toFixed(2)} 亿`;
+const median = (arr) => [...arr].sort((a, b) => a - b)[Math.floor(arr.length / 2)];
+const avg = (arr) => arr.reduce((s, x) => s + x, 0) / arr.length;
+function readLS(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } }
+function writeLS(k, v, ttl) { try { if (ttl) localStorage.setItem(k, JSON.stringify({ v, t: Date.now() + ttl })); else localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+function readLSExp(k, ttl) { try { const o = JSON.parse(localStorage.getItem(k) || "null"); if (!o) return null; if (ttl && (!o.t || o.t < Date.now())) return null; return o.v; } catch { return null; } }
+
+const API = "/api/div/stockPrice";
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`数据请求失败（${r.status}）`);
+  return r.json();
+}
+async function fetchText(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`数据请求失败（${r.status}）`);
+  return r.text();
+}
+
+/* ================= 网格股数据（与参考站一致） ================= */
+const GRID = [
+["电力","中国广核","003816",0.086],["电力","中国核电","601985",0.18],
+["水电","长江电力","600900",1],["水电","国投电力","600886",0.5081],
+["电力","川投能源","600674",0.5],["电力","华能蒙电","600863",0.22],
+["电力","国电电力","600795",0.241],["电力","华能国际","600011",0.4],
+["银行","农业银行","601288",0.2492],["银行","工商银行","601398",0.3103],
+["银行","中国银行","601988",0.2263],["银行","建设银行","601939",0.3887],
+["银行","交通银行","601328",0.3247],["银行","邮储银行","601658",0.2183],
+["银行","招商银行","600036",2.016],["银行","华夏银行","600015",0.42],
+["银行","中信银行","601998",0.381],["银行","兴业银行","601166",1.066],
+["银行","平安银行","000001",0.596],["银行","成都银行","601838",0.921],
+["银行","宁波银行","002142",1.2],["银行","江苏银行","600919",0.564],
+["银行","北京银行","601169",0.278],["银行","民生银行","600016",0.189],
+["保险","中国平安","601318",2.7],["保险","中国太保","601601",1.15],
+["保险","新华保险","601336",2.73],
+["白酒","贵州茅台","600519",52],["白酒","五粮液","000858",5.16],
+["白酒","泸州老窖","000568",5.775],
+["通讯","中国移动","600941",4.704],["通讯","中国电信","601728",0.272],
+["白色家电","美的集团","000333",4.3],["白色家电","格力电器","000651",3],
+["白色家电","海尔智家","600690",1.1559],
+["中药","云南白药","000538",2.6],["中药","羚锐制药","600285",1.1],
+["中药","东阿阿胶","000423",2.7],
+["运输","中远海控","601919",1],["运输","大秦铁路","601006",0.22],
+["运输","招商公路","001965",0.373],["运输","粤高速A","000429",0.604],
+["能源","中国神华","601088",2.01],["能源","陕西煤业","601225",0.948],
+["能源","中煤能源","601898",0.383],["能源","中国海油","600938",1.152],
+["能源","中国石化","600028",0.2],["能源","中国石油","601857",0.47],
+["有色","藏格矿业","000408",2.5],["有色","紫金矿业","601899",0.6],
+["有色","神火股份","000933",0.8],["有色","云铝股份","000807",0.699],
+["消费","分众传媒","002027",0.34],["消费","伊利股份","600887",1.38]
+].map(([sector, name, code, dive]) => ({ sector, name, code, dive }));
+const SECTORS = ["全部", ...new Set(GRID.map((l) => l.sector))];
+const YB_OVERLAY = { "000538": [{ year: 2024, perShare: 1.213 }, { year: 2025, perShare: 1.019 }] };
+
+/* ================= 预测核心计算（与参考站一致） ================= */
+function calc(annualProfit, shares, payout, interimAnchor, commitment) {
+  const minPayoutRatio = (commitment && commitment.minPayoutRatio) ?? 0;
+  const effectivePayout = payout;
+  const profitDps = (annualProfit * payout) / shares;
+  const usesInterimAnchor = interimAnchor !== null && interimAnchor < profitDps * 0.9;
+  const base = usesInterimAnchor ? interimAnchor : profitDps;
+  const modelEligible = (commitment && commitment.modelEligible) === true;
+  const policyDpsFloor = modelEligible
+    ? Math.max(
+        (commitment && commitment.minDps) ?? 0,
+        commitment && commitment.minCashAmount ? commitment.minCashAmount / shares : 0,
+        minPayoutRatio ? (annualProfit * minPayoutRatio) / shares : 0
+      )
+    : null;
+  return {
+    annualDps: Math.max(base, modelEligible ? (policyDpsFloor ?? 0) : 0),
+    effectivePayout,
+    profitDps,
+    policyDpsFloor,
+    policyApplied: modelEligible && (policyDpsFloor ?? 0) > base,
+    usesInterimAnchor
+  };
+}
+function commitmentText(c) {
+  return [
+    c.minPayoutRatio !== undefined ? `现金分红不低于${c.basis || "归母净利润"}的${(c.minPayoutRatio * 100).toFixed(0)}%` : null,
+    c.minDps !== undefined ? `每股不低于${c.minDps.toFixed(2)}元` : null,
+    c.minCashAmount !== undefined ? `现金分红总额不低于${(c.minCashAmount / 1e8).toFixed(0)}亿元` : null
+  ].filter(Boolean).join("；") || c.commitmentText || "以原公告约定为准";
+}
+
+/* ================= 数据获取 ================= */
+const PREFIX = (c) => {
+  const r = String(c).padStart(6, "0")[0];
+  if (r === "6" || r === "5" || r === "9") return "sh" + String(c).padStart(6, "0");
+  if (r === "0" || r === "3" || r === "1" || r === "2") return "sz" + String(c).padStart(6, "0");
+  if (r === "8" || r === "4") return "bj" + String(c).padStart(6, "0");
+  return "sh" + String(c).padStart(6, "0");
+};
+function parseQuotes(text) {
+  const out = {};
+  const re = /v_([a-z]{2})([\dA-Za-z]+)="([^"]*)"/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const key = m[2];
+    const d = m[3].split("~");
+    if (d.length < 33) continue;
+    const price = parseFloat(d[3]);
+    if (!price || price <= 0) continue;
+    const rawTime = (d[30] || "").replace(/\D/g, "");
+    out[key] = {
+      price,
+      preClose: parseFloat(d[4]),
+      pctChg: parseFloat(d[32]) || 0,
+      tradeDate: rawTime.slice(0, 8),
+      tradeTime: rawTime.length >= 12 ? rawTime.slice(0, 14) : "",
+      marketCap: d.length > 45 ? (parseFloat(d[45]) || undefined) : undefined,
+      name: d[1] || undefined
+    };
+  }
+  return out;
+}
+async function getPrice(code) {
+  const text = await fetchText(`${API}?codes=${PREFIX(code)}`);
+  return parseQuotes(text)[code] || null;
+}
+function isValidPayout(x) {
+  return !!x && typeof x.year === "number" && typeof x.payoutRatio === "number" &&
+    (x.calculationBasis == null || x.calculationBasis === "official" || x.calculationBasis === "estimated") &&
+    (x.pendingImplementation == null || typeof x.pendingImplementation === "boolean");
+}
+async function getPayouts(code) {
+  const key = `dividendPayout:${code === "600519" ? "v3" : "v2"}:${code}`;
+  const cached = readLSExp(key, 0);
+  if (Array.isArray(cached)) return cached.filter(isValidPayout).sort((a, b) => b.year - a.year);
+  const j = await fetchJSON(`${API}?action=dividendPayout&codes=${code}&years=2023,2024,2025&version=3`);
+  const item = (j.data || []).find((x) => x.code === code);
+  const arr = Array.isArray(item && item.data) ? item.data.filter(isValidPayout).sort((a, b) => b.year - a.year) : [];
+  writeLS(key, arr);
+  return arr;
+}
+function parseProfile(s) {
+  const m = String(s).match(/10\s*派\s*(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) / 10 : 0;
+}
+function toRecords(acc) {
+  const records = Object.entries(acc)
+    .map(([yr, ps]) => ({ year: parseInt(yr, 10), perShare: parseFloat(ps.toFixed(4)) }))
+    .sort((a, b) => b.year - a.year);
+  let consecutiveYears = 0;
+  for (let i = 0; i < records.length && (i === 0 || records[i].year === records[i - 1].year - 1); i++) consecutiveYears++;
+  return { records, consecutiveYears };
+}
+async function getHistory(code) {
+  const key = `dividendHistory:v2:${code}`;
+  const cached = readLSExp(key, 0);
+  if (cached) return cached;
+  const filter = `(SECURITY_CODE="${code.padStart(6, "0")}")`;
+  const params = new URLSearchParams({ reportName: "RPT_SHAREBONUS_DET", columns: "ALL", filter, pageNumber: "1", pageSize: "200", sortColumns: "REPORT_DATE", sortTypes: "-1" });
+  const j = await fetchJSON(`${API}?action=dividendHistory&${params}`);
+  const rows = (j && j.result && j.result.data) || [];
+  const acc = {};
+  for (const g of rows) {
+    const prog = g.ASSIGN_PROGRESS || "";
+    if (!["实施分配", "股东大会决议通过", "董事会决议通过", "特别分配"].some((x) => prog.includes(x))) continue;
+    const yr = g.REPORT_DATE ? parseInt(g.REPORT_DATE.slice(0, 4), 10) : 0;
+    if (!yr) continue;
+    let dps = 0;
+    if (g.IMPL_PLAN_PROFILE) dps = parseProfile(g.IMPL_PLAN_PROFILE);
+    if (!dps && g.PRETAX_BONUS_RMB) dps = Number(g.PRETAX_BONUS_RMB) / 10;
+    if (dps > 0) acc[yr] = (acc[yr] || 0) + parseFloat(dps.toFixed(4));
+  }
+  let hist = toRecords(acc);
+  const overlay = YB_OVERLAY[code];
+  if (hist && overlay) {
+    for (const o of overlay) {
+      const g = hist.records.find((r) => r.year === o.year);
+      if (g) g.perShare = parseFloat((g.perShare + o.perShare).toFixed(4));
+      else { hist.records.push({ year: o.year, perShare: o.perShare }); hist.records.sort((a, b) => b.year - a.year); }
+    }
+    hist.consecutiveYears = (() => { let n = 0; for (let i = 0; i < hist.records.length && (i === 0 || hist.records[i].year === hist.records[i - 1].year - 1); i++) n++; return n; })();
+  }
+  if (hist && hist.records.length > 0) {
+    const recentY = new Date().getFullYear() - 1;
+    const ttl = hist.records.some((r) => r.year >= recentY) ? 24 * 3600e3 : 30 * 24 * 3600e3;
+    writeLS(key, hist, ttl);
+  }
+  return hist;
+}
+
+/* ================= 名称搜索 ================= */
+async function searchByName(q) {
+  const local = GRID.filter((s) => s.name.includes(q) || s.code.startsWith(q)).slice(0, 6)
+    .map((s) => ({ name: s.name, code: s.code, isHK: false }));
+  if (local.length) return local;
+  try {
+    const t = await fetchText(`${API}?action=search&source=sina&key=${encodeURIComponent(q)}`);
+    const m = t.match(/suggestvalue="([^"]*)"/);
+    if (m && m[1] !== "N") {
+      const out = [];
+      for (const it of m[1].split(";")) {
+        if (!it) continue;
+        const f = it.split(",");
+        const name = f[0], market = f[1], code = f[2];
+        if (!name || !code) continue;
+        const isHK = market === "31";
+        const isA = ["11", "12", "13", "14", "15"].includes(market);
+        if (!isHK && !isA) continue;
+        out.push({ name, code: isHK ? code.replace(/^0+/, "").padStart(4, "0") : code.padStart(6, "0"), isHK });
+        if (out.length >= 8) break;
+      }
+      if (out.length) return out;
+    }
+  } catch {}
+  try {
+    const emTxt = await fetchText(`${API}?action=search&source=em&input=${encodeURIComponent(q)}&type=14&token=D43BF722C8E33BDC906FB84D85E32628&count=8`);
+    const json = JSON.parse(emTxt.replace(/^[^(]*\(/, "").replace(/\);?\s*$/, ""));
+    const data = (((json.result || {}).QuotationCodeTable || {}).Data) || [];
+    const out = data.filter((d) => ["AStock", "BStock", "HK", "Fund", "UsStock"].includes(d.Classify)).slice(0, 8)
+      .map((d) => ({
+        name: d.Name,
+        code: d.Classify === "HK" ? d.Code.replace(/^0+/, "").padStart(4, "0") : d.Code.padStart(6, "0"),
+        isHK: d.Classify === "HK",
+        isUS: d.Classify === "UsStock"
+      }));
+    if (out.length) return out;
+  } catch {}
+  if (/^\d{5,6}$/.test(q)) {
+    try {
+      const code = q.padStart(6, "0");
+      const p = await getPrice(code);
+      if (p && p.price) return [{ name: p.name || code, code, isHK: false }];
+    } catch {}
+  }
+  return [];
+}
+
+/* ================= 状态 ================= */
+const state = {
+  code: "600941",
+  s: null,
+  err: "",
+  loading: false,
+  searchResults: [],
+  sector: "全部",
+  payoutSel: "auto",
+  liked: false,
+  likeCount: null,
+  manual: false,
+  ratio: "",
+  commitments: []
+};
+
+/* ================= 主查询流程 ================= */
+async function query(codeRaw) {
+  let a = String(codeRaw).trim();
+  if (!a) { state.err = "请输入 6 位 A 股代码或股票名称。"; renderAll(); return; }
+  state.loading = true; state.err = ""; state.s = null; state.searchResults = []; state.sector = "全部"; state.payoutSel = "auto"; state.manual = false;
+  renderAll();
+  try {
+    if (!/^\d{6}$/.test(a)) {
+      const t = (await searchByName(a)).filter((h) => !h.isHK && !h.isUS && /^\d{6}$/.test(h.code));
+      if (t.length === 0) throw new Error(`未找到“${a}”对应的 A 股标的。`);
+      if (t.length > 1) { state.searchResults = t.slice(0, 8); state.loading = false; renderAll(); return; }
+      a = t[0].code;
+    }
+    const [o, y, priceMap, history] = await Promise.all([
+      fetchJSON(`${API}?action=forecastData&code=${a}`),
+      getPayouts(a),
+      getPrice(a),
+      getHistory(a)
+    ]);
+    const T = (t) => { const f = o.reports.find((B) => String(B.REPORTDATE).startsWith(t)); return f ? f.PARENT_NETPROFIT : undefined; };
+    const Q = T("2026-06-30");
+    const W = [2025, 2024, 2023].map((t) => {
+      const h = T(`${t}-06-30`), B = T(`${t}-12-31`);
+      if (!h || !B) throw new Error(`缺少 ${t} 年中报或年报归母净利润。`);
+      return { year: t, h1Profit: h, annualProfit: B, ratio: h / B };
+    });
+    if (!Q) throw new Error("尚未取得 2026 年中报归母净利润。");
+    if (!(o.latestShare && o.latestShare.TOTAL_SHARES)) throw new Error("尚未取得最新权益分派股本。");
+    if (y.length < 3) throw new Error("尚未取得连续三年的常规现金派息率。");
+    const X = Q / median(W.map((t) => t.ratio));
+    state.ratio = (median(W.map((t) => t.ratio)) * 100).toFixed(2);
+    const H = y.map((t) => t.payoutRatio / 100);
+    const payoutAverage = avg(H);
+    const payoutMedian = median(H);
+    const payoutLatest = y.reduce((acc, t) => (t.year > acc.year ? t : acc)).payoutRatio / 100;
+    const method =
+      X > W[0].annualProfit * 1.15 && payoutLatest < payoutAverage - 0.03 ? "latest"
+        : Math.max(...H) > 1 || Math.max(...H) - Math.min(...H) > 0.3 ? "median"
+          : "average";
+    const effectivePayout = method === "latest" ? payoutLatest : method === "median" ? payoutMedian : payoutAverage;
+    const shares = o.latestShare.TOTAL_SHARES;
+    const interim = o.interimDividend && o.interimDividend.PRETAX_BONUS_RMB ? o.interimDividend.PRETAX_BONUS_RMB / 10 : null;
+    const priorInterim = o.priorInterimDividend && o.priorInterimDividend.PRETAX_BONUS_RMB ? o.priorInterimDividend.PRETAX_BONUS_RMB / 10 : null;
+    const priorAnnualDps = (history && history.records.find((t) => t.year === 2025) ? history.records.find((t) => t.year === 2025).perShare : null) ?? null;
+    const interimAnchor = interim !== null && priorInterim !== null && priorAnnualDps !== null ? (priorAnnualDps * interim) / priorInterim : null;
+    const r = calc(X, shares, effectivePayout, interimAnchor, o.dividendCommitment);
+    const appliedPayout = (r.annualDps * shares) / X;
+    const price = priceMap && priceMap.price > 0 ? priceMap.price : null;
+    state.s = {
+      code: a,
+      name: o.name || a,
+      annualDps: r.annualDps,
+      terminalDps: interim === null ? null : Math.max(r.annualDps - interim, 0),
+      yieldRate: price && price > 0 ? r.annualDps / price : null,
+      price,
+      annualProfit: X,
+      h1Profit: Q,
+      payout: effectivePayout,
+      effectivePayout: r.effectivePayout,
+      appliedPayout,
+      payoutAverage,
+      payoutMedian,
+      payoutLatest,
+      payoutMethod: method,
+      systemPayoutMethod: method,
+      shares,
+      shareSourceDate: o.latestShare.REPORT_DATE || o.latestShare.NOTICE_DATE || null,
+      interim,
+      priorInterim,
+      priorAnnualDps,
+      profitDps: r.profitDps,
+      interimAnchor,
+      usesInterimAnchor: r.usesInterimAnchor,
+      commitment: o.dividendCommitment,
+      policyDpsFloor: r.policyDpsFloor,
+      policyApplied: r.policyApplied,
+      seasonality: W,
+      payouts: [...y].sort((t1, t2) => t1.year - t2.year),
+      history: ((history && history.records) || []).filter((t) => t.year >= 2023 && t.year <= 2025).sort((t1, t2) => t1.year - t2.year),
+      interimExceedsModel: interim !== null && interim > r.annualDps
+    };
+  } catch (e) {
+    state.err = e instanceof Error ? e.message : "数据请求失败，请稍后重试。";
+  } finally {
+    state.loading = false;
+  }
+  renderAll();
+}
+
+/* ================= 派生操作 ================= */
+function switchPayout(method) {
+  state.payoutSel = method;
+  if (!state.s) { renderAll(); return; }
+  const n = method === "auto" ? state.s.systemPayoutMethod : method;
+  const payout = n === "average" ? state.s.payoutAverage : n === "median" ? state.s.payoutMedian : state.s.payoutLatest;
+  const r = calc(state.s.annualProfit, state.s.shares, payout, state.s.interimAnchor, state.s.commitment);
+  state.s = {
+    ...state.s,
+    payout,
+    effectivePayout: r.effectivePayout,
+    payoutMethod: n,
+    profitDps: r.profitDps,
+    annualDps: r.annualDps,
+    appliedPayout: (r.annualDps * state.s.shares) / state.s.annualProfit,
+    policyDpsFloor: r.policyDpsFloor,
+    policyApplied: r.policyApplied,
+    usesInterimAnchor: r.usesInterimAnchor,
+    terminalDps: state.s.interim === null ? null : Math.max(r.annualDps - state.s.interim, 0),
+    yieldRate: state.s.price && state.s.price > 0 ? r.annualDps / state.s.price : null,
+    interimExceedsModel: state.s.interim !== null && state.s.interim > r.annualDps
+  };
+  renderAll();
+}
+function applyManualRatio() {
+  const ratio = Number(state.ratio) / 100;
+  if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1) { state.err = "请输入大于 0 且不超过 100 的 H1 / 全年利润比例。"; renderAll(); return; }
+  state.err = "";
+  if (!state.s) return;
+  const annualProfit = state.s.h1Profit / ratio;
+  const r = calc(annualProfit, state.s.shares, state.s.payout, state.s.interimAnchor, state.s.commitment);
+  state.s = {
+    ...state.s,
+    annualProfit,
+    annualDps: r.annualDps,
+    effectivePayout: r.effectivePayout,
+    profitDps: r.profitDps,
+    appliedPayout: (r.annualDps * state.s.shares) / annualProfit,
+    policyDpsFloor: r.policyDpsFloor,
+    policyApplied: r.policyApplied,
+    usesInterimAnchor: r.usesInterimAnchor,
+    terminalDps: state.s.interim === null ? null : Math.max(r.annualDps - state.s.interim, 0),
+    yieldRate: state.s.price && state.s.price > 0 ? r.annualDps / state.s.price : null,
+    interimExceedsModel: state.s.interim !== null && state.s.interim > r.annualDps
+  };
+  state.manual = true;
+  renderAll();
+}
+function restoreMedianRatio() {
+  if (state.s) {
+    state.ratio = (median(state.s.seasonality.map((i) => i.ratio)) * 100).toFixed(2);
+    const annualProfit = state.s.h1Profit / median(state.s.seasonality.map((i) => i.ratio));
+    const r = calc(annualProfit, state.s.shares, state.s.payout, state.s.interimAnchor, state.s.commitment);
+    state.s = {
+      ...state.s,
+      annualProfit,
+      annualDps: r.annualDps,
+      effectivePayout: r.effectivePayout,
+      profitDps: r.profitDps,
+      appliedPayout: (r.annualDps * state.s.shares) / annualProfit,
+      policyDpsFloor: r.policyDpsFloor,
+      policyApplied: r.policyApplied,
+      usesInterimAnchor: r.usesInterimAnchor,
+      terminalDps: state.s.interim === null ? null : Math.max(r.annualDps - state.s.interim, 0),
+      yieldRate: state.s.price && state.s.price > 0 ? r.annualDps / state.s.price : null,
+      interimExceedsModel: state.s.interim !== null && state.s.interim > r.annualDps
+    };
+  }
+  state.manual = false;
+  renderAll();
+}
+
+/* ================= 渲染 ================= */
+function renderCommitmentSummary() {
+  const el = $("commitmentSummary");
+  if (!state.commitments.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+  const C = state.commitments;
+  const modelEligible = C.filter((i) => i.modelEligible).length;
+  const archived = C.length - modelEligible;
+  const groups = [true, false].map((flag) => {
+    const rows = C.filter((i) => !!i.modelEligible === flag);
+    const items = rows.map((n) => {
+      const c = GRID.find((j) => j.code === n.code);
+      const m = [
+        n.minPayoutRatio !== undefined ? `≥ ${(n.minPayoutRatio * 100).toFixed(0)}%` : null,
+        n.minDps !== undefined ? `每股 ≥ ${n.minDps.toFixed(2)} 元` : null,
+        n.minCashAmount !== undefined ? `现金 ≥ ${(n.minCashAmount / 1e8).toFixed(0)} 亿元` : null
+      ].filter(Boolean).join(" · ");
+      return `<a href="${esc(n.eastmoneySourceUrl || n.sourceUrl || "#")}" target="_blank" rel="noreferrer" aria-label="查看${esc((c && c.name) || n.name || n.code)}的分红承诺公告（新窗口打开）">
+        <strong>${esc((c && c.name) || n.name || n.code)}</strong>
+        <span class="forecast-commitment-code">${esc(n.code)}</span>
+        <span class="forecast-commitment-period">${esc(n.startYear)}–${esc(n.endYear)}</span>
+        <b>${esc(m || n.commitmentText || n.basis || "查看公告")}</b>
+        <em>${esc(commitmentText(n))}</em>
+      </a>`;
+    }).join("");
+    return `<div class="forecast-commitment-group">
+      <h3>${flag ? "已纳入预测下限" : "已记录，暂不直接套用"} <small>${rows.length} 条</small></h3>
+      <div class="forecast-commitment-table-head">
+        <span>标的</span><span>代码</span><span>有效期</span><span>承诺内容</span><span>具体承诺</span>
+      </div>
+      ${items}
+    </div>`;
+  }).join("");
+  el.style.display = "";
+  el.innerHTML = `
+    <div class="forecast-commitment-summary-head">
+      <div>
+        <span>2026 分红承诺库</span>
+        <strong>${C.length} 条有效量化承诺</strong>
+        <p>公告规划已入库；仅与“归母净利”口径一致的承诺会作为预测下限。</p>
+      </div>
+      <div class="forecast-commitment-counts">
+        <b>${modelEligible}<small>纳入模型</small></b>
+        <b>${archived}<small>仅留档</small></b>
+      </div>
+    </div>
+    <details>
+      <summary>查看全部 ${C.length} 条承诺 <span>展开</span></summary>
+      <div class="forecast-commitment-groups">${groups}</div>
+    </details>`;
+}
+function renderSectorPicker() {
+  const el = $("sectorPicker");
+  const tabs = SECTORS.map((s) => `<button type="button" class="${state.sector === s ? "active" : ""}" data-sector="${esc(s)}">${esc(s)}</button>`).join("");
+  const body = state.sector === "全部"
+    ? `<p>选择一个板块，快速带入网格页标的。</p>`
+    : `<div class="forecast-sector-stocks">${GRID.filter((i) => i.sector === state.sector).map((i) =>
+        `<button type="button" data-gocode="${i.code}"><strong>${esc(i.name)}</strong><span>${i.code}</span></button>`).join("")}</div>`;
+  el.innerHTML = `<div class="forecast-sector-tabs">${tabs}</div>${body}`;
+}
+function renderSearchResults() {
+  const el = $("searchResults");
+  if (!state.searchResults.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+  el.style.display = "";
+  el.innerHTML = `<b>找到多个 A 股标的，请选择：</b><div>${state.searchResults.map((i) =>
+    `<button type="button" data-gocode="${i.code}"><strong>${esc(i.name)}</strong><span>${i.code}</span></button>`).join("")}</div>`;
+}
+function renderError() {
+  const el = $("forecastError");
+  if (!state.err) { el.style.display = "none"; el.innerHTML = ""; return; }
+  el.style.display = "";
+  el.innerHTML = `<b>暂不覆盖</b><span>${esc(state.err)}</span>`;
+}
+function renderEmpty() {
+  const el = $("forecastEmpty");
+  el.style.display = !state.s && !state.err && !state.loading ? "" : "none";
+}
+function renderResult() {
+  const el = $("forecastResult");
+  const s = state.s;
+  if (!s) { el.innerHTML = ""; return; }
+  const med = median(s.seasonality.map((i) => i.ratio));
+  const be = Math.max(s.annualDps, ...s.history.map((i) => i.perShare), 0.01);
+  const me = s.commitment && s.commitment.minPayoutRatio !== undefined ? (s.annualProfit * s.commitment.minPayoutRatio) / s.shares : null;
+  const je = s.commitment && s.commitment.minCashAmount !== undefined ? s.commitment.minCashAmount / s.shares : null;
+  const methodLabel = s.payoutMethod === "latest" ? "最近一年" : s.payoutMethod === "median" ? "中位数" : "平均值";
+  const sysMethodLabel = s.systemPayoutMethod === "average" ? "平均值" : s.systemPayoutMethod === "median" ? "中位数" : "最近一年";
+  const formulaNote = (() => {
+    const c = s.commitment;
+    if (c && c.modelEligible === false) return `该承诺为“${c.basis || "公告指定"}”口径或累计期间约束，无法可靠拆分为单年下限，已留档但不参与 2026E 计算。`;
+    if (s.policyApplied) return `已纳入 ${c.sourceName} 的有效期内量化下限；该承诺${c.conditional ? "存在公告列明的适用条件，" : ""}不代表公司分红承诺。`;
+    if (s.usesInterimAnchor) return `利润模型为 ${s.profitDps.toFixed(3)} 元/股；中期息同比结果为 ${s.interimAnchor.toFixed(3)} 元/股，当前采用更保守的中期息同比结果。`;
+    return "选择利润模型：未触发中期息锚定或政策下限高于模型的条件。";
+  })();
+  const interimAnchorRow = s.interimAnchor !== null ? `
+    <div class="forecast-equation ${s.usesInterimAnchor && !s.policyApplied ? "is-selected" : ""}">
+      <b class="forecast-formula-label">中期息同比锚定</b>
+      <span>25年全年股息 <b>${s.priorAnnualDps.toFixed(3)} 元</b></span>
+      <i>×</i>
+      <span>26H1 中期息 <b>${s.interim.toFixed(3)} 元</b></span>
+      <i>÷</i>
+      <span>25H1 中期息 <b>${s.priorInterim.toFixed(3)} 元</b></span>
+      <i>=</i>
+      <strong>${s.interimAnchor.toFixed(3)} 元/股</strong>
+      <em>${s.usesInterimAnchor && !s.policyApplied ? "已采用（更保守）" : "参考"}</em>
+    </div>` : "";
+  const policyEquation = s.commitment && s.commitment.modelEligible ? `
+    <div class="forecast-equation forecast-policy-equation ${s.policyApplied ? "is-selected" : ""}">
+      <b class="forecast-formula-label">政策下限</b>
+      ${me !== null ? `<span>比例下限 <b>${pct(s.commitment.minPayoutRatio)}</b> × ${yi(s.annualProfit)} ÷ ${(s.shares / 1e8).toFixed(3)} 亿股 = <b>${me.toFixed(3)} 元/股</b></span>` : ""}
+      ${je !== null ? `<span>现金下限 <b>${yi(s.commitment.minCashAmount)}</b> ÷ ${(s.shares / 1e8).toFixed(3)} 亿股 = <b>${je.toFixed(3)} 元/股</b></span>` : ""}
+      ${s.commitment.minDps !== undefined ? `<span>每股下限 <b>${s.commitment.minDps.toFixed(3)} 元/股</b></span>` : ""}
+      <i>→</i><span>取较高值</span>
+      <strong>${s.policyDpsFloor.toFixed(3)} 元/股</strong>
+      <em>${s.policyApplied ? "已纳入" : "下限校验"}</em>
+    </div>` : "";
+  const policyBlock = s.commitment ? `
+    <section class="forecast-policy ${s.policyApplied ? "is-applied" : ""}">
+      <div>
+        <b>${s.policyApplied ? "分红承诺下限已纳入" : s.commitment.modelEligible === false ? "分红承诺已记录，未直接套用" : "分红承诺下限校验"}</b>
+        <span>${s.commitment.startYear}–${s.commitment.endYear} 年有效 · ${s.commitment.includesInterim ? "全年口径，含中期息" : "全年口径"} · ${s.commitment.conditional ? "条件性承诺" : "量化承诺"}</span>
+      </div>
+      <strong>${s.commitment.modelEligible === false ? `口径：${s.commitment.basis || "公告口径"}` : `26E 政策下限 ${s.policyDpsFloor.toFixed(3)} 元/股`}</strong>
+      <p><b>承诺内容：</b>${esc(commitmentText(s.commitment))}。${s.commitment.conditions && s.commitment.conditions.length > 0 ? `适用条件：${esc(s.commitment.conditions.join("；"))}。` : ""}<a href="${esc(s.commitment.eastmoneySourceUrl || s.commitment.sourceUrl || "#")}" target="_blank" rel="noreferrer">${s.commitment.eastmoneySourceUrl ? "查看东方财富公告" : "查看原公告"}</a></p>
+    </section>` : "";
+  const alertBlock = s.interimExceedsModel ? `
+    <section class="forecast-alert">
+      <b>数据校验提示</b>
+      <span>模型推算的全年股息低于已公告中期息，结果未被“max”覆盖；请等待年末利润或分红方案更新后再判断。</span>
+    </section>` : "";
+  const profitEq = `
+    <div class="forecast-equation ${!s.usesInterimAnchor && !s.policyApplied ? "is-selected" : ""}">
+      <b class="forecast-formula-label">利润模型</b>
+      ${state.manual
+        ? `<span>26H1 利润 <b>${yi(s.h1Profit)}</b> ÷ 手动比例 <b>${state.ratio}%</b></span>`
+        : `<span>26H1 利润 <b>${yi(s.h1Profit)}</b></span><i>÷</i><span>季节性中位数 <b>${pct(med)}</b></span>`}
+      <i>×</i>
+      <span>选择派息率 <b>${pct(s.effectivePayout)}</b></span>
+      <i>÷</i>
+      <span>权益股本 <b>${(s.shares / 1e8).toFixed(3)} 亿股</b></span>
+      <i>=</i>
+      <strong>${s.profitDps.toFixed(3)} 元/股</strong>
+      <em>${!s.usesInterimAnchor && !s.policyApplied ? (state.manual ? "手动采用" : "已采用") : "参考"}</em>
+    </div>`;
+
+  el.innerHTML = `
+    <section class="forecast-result-head">
+      <div>
+        <div class="forecast-security">
+          <span>${s.code}</span>
+          <h2>${esc(s.name)}</h2>
+          <em>中报锚定 · B级</em>
+        </div>
+        <p>数据按查询时实时拉取；每股预测不随盘中行情变动，预期股息率随现价更新。</p>
+      </div>
+      <button type="button" class="forecast-refresh" id="btnRefresh" ${state.loading ? "disabled" : ""}>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 8.25A6 6 0 1 0 16 12M15.5 4.5v3.75h-3.75" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        刷新数据
+      </button>
+    </section>
+
+    <section class="forecast-hero-grid" aria-label="预测结果">
+      <article class="forecast-main-kpi">
+        <span>26E 每股股息</span>
+        <strong>${s.annualDps.toFixed(3)}<small>元</small></strong>
+        <p>${s.terminalDps === null ? "中期息尚未公告" : `预计末期：${s.terminalDps.toFixed(3)} 元`}</p>
+      </article>
+      <article>
+        <span>26E 预期股息率</span>
+        <strong class="forecast-accent">${s.yieldRate === null ? "—" : pct(s.yieldRate)}</strong>
+        <p>现价：${s.price === null ? "未取得" : `${s.price.toFixed(2)} 元`}</p>
+      </article>
+      <article>
+        <span>全年归母净利润</span>
+        <strong>${yi(s.annualProfit)}</strong>
+        <p>26H1：${yi(s.h1Profit)}</p>
+      </article>
+      <article class="forecast-payout-kpi">
+        <span>26E 推算派息率</span>
+        <strong>${pct(s.appliedPayout)}</strong>
+        <p>${s.usesInterimAnchor ? `中期息锚定；历史基准 ${pct(s.payout)}` : `历史基准：23–25 年${methodLabel}`}</p>
+        <div class="forecast-payout-quick-switch">
+          <button type="button" class="${s.payoutMethod === "average" ? "active" : ""}" data-payout="average">平均 ${pct(s.payoutAverage)}</button>
+          <button type="button" class="${s.payoutMethod === "median" ? "active" : ""}" data-payout="median">中位 ${pct(s.payoutMedian)}</button>
+          <button type="button" class="${s.payoutMethod === "latest" ? "active" : ""}" data-payout="latest">最近 ${pct(s.payoutLatest)}</button>
+        </div>
+        <div class="forecast-info-tip ${state.payoutSel === "auto" ? "" : ""}" tabindex="0" aria-label="查看与切换近三年派息率" id="infoTip">
+          i
+          <span role="tooltip">
+            <b>近三年常规现金派息率</b>
+            ${s.payouts.map((i) => `<em>${i.year}<strong>${pct(i.payoutRatio / 100)}</strong></em>`).join("")}
+            <div class="forecast-payout-switch">
+              <button type="button" class="${state.payoutSel === "auto" ? "active" : ""}" data-payout="auto">系统默认 · ${sysMethodLabel}</button>
+              <button type="button" class="${state.payoutSel === "average" ? "active" : ""}" data-payout="average">平均值 ${pct(s.payoutAverage)}</button>
+              <button type="button" class="${state.payoutSel === "median" ? "active" : ""}" data-payout="median">中位数 ${pct(s.payoutMedian)}</button>
+              <button type="button" class="${state.payoutSel === "latest" ? "active" : ""}" data-payout="latest">最近一年 ${pct(s.payoutLatest)}</button>
+            </div>
+            <small>当前利润模型：<strong>${pct(s.effectivePayout)}</strong></small>
+            <small>26E 推算派息率：<strong>${pct(s.appliedPayout)}</strong></small>
+          </span>
+        </div>
+      </article>
+    </section>
+    ${policyBlock}
+    ${alertBlock}
+
+    <section class="forecast-desktop-data">
+      <div class="forecast-section-title">
+        <div>
+          <h2>预测输入与计算过程</h2>
+          <p>所有展示值均为本次查询的原始输入或其直接计算结果。</p>
+        </div>
+        <span>单位：元 / 股 / 亿元</span>
+      </div>
+      <div class="forecast-data-layout">
+        <div class="forecast-matrix">
+          <div class="forecast-matrix-head">
+            <span>利润季节性</span><span>H1 归母净利</span><span>全年归母净利</span><span>H1 / 全年</span>
+          </div>
+          <div class="forecast-matrix-row forecast-matrix-forecast">
+            <b>2026E <small>${state.manual ? "手动" : "预测"}</small></b>
+            <span>${yi(s.h1Profit)}</span><span>${yi(s.annualProfit)}</span>
+            <strong>${pct(med)}</strong>
+          </div>
+          ${s.seasonality.map((i) => `<div class="forecast-matrix-row"><b>${i.year}</b><span>${yi(i.h1Profit)}</span><span>${yi(i.annualProfit)}</span><strong>${pct(i.ratio)}</strong></div>`).join("")}
+          <div class="forecast-matrix-row forecast-matrix-result">
+            <b>中位数</b><span>—</span><span>—</span><strong>${pct(med)}</strong>
+          </div>
+        </div>
+        <div class="forecast-input-list">
+          <div><span>已公告中期股息</span><b>${s.interim === null ? "尚未公告" : `${s.interim.toFixed(3)} 元/股`}</b></div>
+          <div><span>权益分派股本</span><b>${(s.shares / 1e8).toFixed(3)} 亿股<a class="forecast-source-link" href="https://data.eastmoney.com/yjfp/detail/${s.code}.html" target="_blank" rel="noreferrer">来源：东方财富分红方案</a></b></div>
+          <div><span>下半年修正系数</span><b>1.00 <small>无披露依据调整</small></b></div>
+          <div class="forecast-manual-profit">
+            <span>H1 / 全年利润比例 <small>可调节</small></span>
+            <div>
+              <input type="number" id="ratioInput" min="0" step="0.01" value="${esc(state.ratio)}" placeholder="百分比" aria-label="手动设定H1归母净利占全年利润比例，单位百分比" />
+              <b>%</b>
+              <button type="button" id="ratioApply">采用</button>
+            </div>
+            ${state.manual
+              ? `<button type="button" id="ratioRestore">恢复中位数</button>`
+              : `<small>默认历史中位数；点击“采用”才影响预测</small>`}
+          </div>
+          <div><span>预测末期股息</span><b>${s.terminalDps === null ? "待中期息公告后拆分" : `${s.terminalDps.toFixed(3)} 元/股`}</b></div>
+        </div>
+      </div>
+      <div class="forecast-formulas">
+        ${profitEq}
+        ${interimAnchorRow}
+        ${policyEquation}
+        <p>手动比例仅影响本次预测，不会修改历史季节性中位数。 </p>
+        <p>${formulaNote}</p>
+      </div>
+    </section>
+
+    <section class="forecast-desktop-data forecast-history-panel">
+      <div class="forecast-section-title">
+        <div>
+          <h2>历史实际股息与派息率</h2>
+          <p>股息为已公告/实施口径；派息率在异常值出现时取三年中位数，否则取平均值，不用特别分红做外推。</p>
+        </div>
+      </div>
+      <div class="forecast-history-grid">
+        <div class="forecast-bar-chart">
+          ${[...s.history, { year: 2026, perShare: s.annualDps }].map((i) => `
+            <div class="forecast-bar-item">
+              <span class="forecast-bar-value">${i.perShare.toFixed(3)}</span>
+              <div class="forecast-bar ${i.year === 2026 ? "is-forecast" : ""}" style="height:${Math.max(12, (i.perShare / be) * 134)}px"></div>
+              <b>${i.year === 2026 ? "2026E" : i.year}</b>
+            </div>`).join("")}
+        </div>
+        <div class="forecast-payout-table">
+          <div><span>年度</span><span>常规现金派息率</span></div>
+          ${s.payouts.map((i) => `<div><b>${i.year}</b><strong>${pct(i.payoutRatio / 100)}</strong></div>`).join("")}
+          <div class="forecast-payout-median"><b>平均值${s.payoutMethod === "average" ? "（模型）" : "（参考）"}</b><strong>${pct(s.payoutAverage)}</strong></div>
+          <div class="forecast-payout-median"><b>中位数${s.payoutMethod === "median" ? "（模型）" : "（参考）"}</b><strong>${pct(s.payoutMedian)}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="forecast-mobile-data">
+      <details open>
+        <summary>预测输入与计算过程 <span>展开</span></summary>
+        <div class="forecast-mobile-detail">
+          ${s.usesInterimAnchor
+            ? `<p>模型采用 <b>中期息同比锚定</b></p>
+               <p>25年全年股息 <b>${s.priorAnnualDps.toFixed(3)} 元/股</b></p>
+               <p>26H1 / 25H1 中期息 <b>${s.interim.toFixed(3)} ÷ ${s.priorInterim.toFixed(3)}</b></p>
+               <p>利润模型（参考） <b>${s.profitDps.toFixed(3)} 元/股</b></p>`
+            : `<p>26H1 归母净利 <b>${yi(s.h1Profit)}</b></p>
+               <p>季节性中位数 <b>${pct(med)}</b></p>
+               <p>选择派息率 <b>${pct(s.effectivePayout)}</b></p>
+               <p>权益分派股本 <b>${(s.shares / 1e8).toFixed(3)} 亿股</b></p>`}
+          ${s.commitment && s.commitment.modelEligible ? `<p>政策下限 <b>${s.policyDpsFloor.toFixed(3)} 元/股</b></p>` : ""}
+          <p>已公告中期股息 <b>${s.interim === null ? "尚未公告" : `${s.interim.toFixed(3)} 元/股`}</b></p>
+          <p>预计末期股息 <b>${s.terminalDps === null ? "待中期息公告后拆分" : `${s.terminalDps.toFixed(3)} 元/股`}</b></p>
+          <div class="forecast-mobile-manual-profit">
+            <b>H1 / 全年利润比例（可调节）</b>
+            <div>
+              <input type="number" id="ratioInputM" min="0" step="0.01" value="${esc(state.ratio)}" placeholder="百分比" aria-label="手动设定H1归母净利占全年利润比例，单位百分比" />
+              <b>%</b>
+              <button type="button" id="ratioApplyM">采用</button>
+            </div>
+            ${state.manual
+              ? `<button type="button" id="ratioRestoreM">恢复中位数</button>`
+              : `<small>默认历史中位数；点击采用才影响预测</small>`}
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>23–25 年利润季节性 <span>展开</span></summary>
+        <div class="forecast-mobile-detail">
+          ${s.seasonality.map((i) => `<p>${i.year} H1/全年 <b>${pct(i.ratio)}</b></p>`).join("")}
+        </div>
+      </details>
+      <details>
+        <summary>历史股息与派息率 <span>展开</span></summary>
+        <div class="forecast-mobile-detail">
+          ${s.history.map((i) => `<p>${i.year} 实际股息 <b>${i.perShare.toFixed(3)} 元/股</b></p>`).join("")}
+          ${s.payouts.map((i) => `<p>${i.year} 派息率 <b>${pct(i.payoutRatio / 100)}</b></p>`).join("")}
+        </div>
+      </details>
+    </div>`;
+}
+
+function renderAll() {
+  renderCommitmentSummary();
+  renderSectorPicker();
+  renderSearchResults();
+  renderError();
+  renderEmpty();
+  renderResult();
+  const btn = $("searchBtn");
+  if (btn) { btn.disabled = state.loading; btn.textContent = state.loading ? "正在拉取数据" : "查询并计算"; }
+  const likeBtn = $("btnLike");
+  if (likeBtn) {
+    likeBtn.classList.toggle("liked", state.liked);
+    likeBtn.setAttribute("aria-pressed", state.liked ? "true" : "false");
+    $("likeCount").textContent = state.likeCount === null ? "…" : state.likeCount;
+  }
+  bindEvents();
+}
+
+/* ================= 事件 ================= */
+function bindEvents() {
+  const form = $("searchForm");
+  form.onsubmit = (e) => { e.preventDefault(); query($("forecast-code").value); };
+  document.querySelectorAll(".forecast-examples button").forEach((b) => {
+    b.onclick = () => { $("forecast-code").value = b.dataset.code; query(b.dataset.code); };
+  });
+  document.querySelectorAll("[data-sector]").forEach((b) => {
+    b.onclick = () => { state.sector = b.dataset.sector; renderSectorPicker(); };
+  });
+  document.querySelectorAll("[data-gocode]").forEach((b) => {
+    b.onclick = () => { $("forecast-code").value = b.dataset.gocode; query(b.dataset.gocode); };
+  });
+  document.querySelectorAll("[data-payout]").forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); switchPayout(b.dataset.payout); };
+  });
+  document.querySelectorAll("#ratioApply, #ratioApplyM").forEach((b) => { b.onclick = applyManualRatio; });
+  document.querySelectorAll("#ratioRestore, #ratioRestoreM").forEach((b) => { b.onclick = restoreMedianRatio; });
+  document.querySelectorAll("#ratioInput, #ratioInputM").forEach((i) => {
+    i.oninput = () => { state.ratio = i.value; };
+  });
+  const refresh = $("btnRefresh");
+  if (refresh) refresh.onclick = () => query(state.code);
+  const back = $("btnBack");
+  if (back) back.onclick = () => location.href = "matrix.html";
+}
+
+/* ================= 点赞（自建后端计数） ================= */
+const LIKE_API = "/api/div/like";
+async function readLikeCount() {
+  try {
+    const r = await fetch(LIKE_API);
+    if (!r.ok) return 0;
+    const j = await r.json();
+    return j.dividendForecastCount || 0;
+  } catch { return 0; }
+}
+async function incLikeCount() {
+  const r = await fetch(LIKE_API, { method: "POST" });
+  if (!r.ok) throw new Error("点赞失败");
+  const j = await r.json();
+  return j.dividendForecastCount || 0;
+}
+function bindLike() {
+  const btn = $("btnLike");
+  if (!btn) return;
+  btn.onclick = async () => {
+    if (state.liked) return;
+    try {
+      state.likeCount = (state.likeCount === null ? 0 : state.likeCount) + 1;
+      state.liked = true;
+      renderAll();
+      const n = await incLikeCount();
+      state.likeCount = n;
+      try { localStorage.setItem("dividend-forecast-liked", "1"); } catch {}
+      renderAll();
+    } catch {
+      state.liked = false;
+      state.likeCount = (state.likeCount === null ? 0 : Math.max((state.likeCount || 1) - 1, 0));
+      renderAll();
+    }
+  };
+}
+
+/* ================= 启动 ================= */
+(function init() {
+  try { state.liked = localStorage.getItem("dividend-forecast-liked") === "1"; } catch {}
+  renderAll();
+  bindLike();
+  // 默认查询 600941
+  query("600941");
+  // 点赞数 + 承诺库
+  readLikeCount().then((n) => { state.likeCount = n; renderAll(); });
+  fetchJSON(`${API}?action=dividendCommitmentSummary`)
+    .then((j) => { state.commitments = j.commitments || []; renderAll(); })
+    .catch(() => { state.commitments = []; renderAll(); });
+})();
+</script>
+</body>
+</html>
