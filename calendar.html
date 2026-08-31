@@ -250,6 +250,7 @@
       <div class="topbar-actions">
         <a class="link-like" href="index.html">← 记账主页</a>
         <button class="link-like" id="btnSync">🔗 同步</button><span class="sync-dot" id="syncDot" title="未同步"></span>
+        <button class="link-like" id="btnNotify" title="新分红事件通过 ServerChan 推送微信">🔔 提醒开</button>
         <button class="link-like primary" id="btnRefresh">🔄 刷新分红</button>
       </div>
     </div>
@@ -461,6 +462,7 @@
     eventsByDate = {};
     evs.forEach(e => { (eventsByDate[e.date] = eventsByDate[e.date] || []).push(e); });
     renderStats(); renderCalendar(); renderUpcoming(); renderStocks(); renderDivDates();
+    checkAndNotify(); // 同步拉取到新持仓后同样推送提醒
   }
   function nowTime() { return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }); }
   async function pushSync() {
@@ -573,6 +575,123 @@
     if (years.length) return byYear[years[years.length - 1]];
     const withPs = recs.filter(r => r.ps).sort((a, b) => (b.exDate || "").localeCompare(a.exDate || ""));
     return withPs.length ? withPs[0].ps : 0;
+  }
+
+  // ---------- ServerChan 微信推送：新分红事件提醒 ----------
+  // 持仓股票/ETF 出现新的「预案公告 / 股权登记 / 除权除息 / 分红发放」时，
+  // 通过 ServerChan 推送微信消息。已推送过的（股票+类型+日期）记入 localStorage，避免重复打扰。
+  const SC_SENDKEY = "SCT322350Ta27zYaSmoOZ6FMRnhwMk3FxJ";
+  const SC_URL = "https://sctapi.ftqq.com/" + SC_SENDKEY + ".send";
+  const SC_PUSH_LOG_KEY = "mmbf_div_push_log_v1";
+  const SC_TOGGLE_KEY = "mmbf_div_push_enabled_v1";
+
+  function loadPushLog() {
+    try { return JSON.parse(localStorage.getItem(SC_PUSH_LOG_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function savePushLog(log) {
+    try { localStorage.setItem(SC_PUSH_LOG_KEY, JSON.stringify(log)); } catch (e) {}
+  }
+  function pushEnabled() {
+    try { const v = localStorage.getItem(SC_TOGGLE_KEY); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function setPushEnabled(on) {
+    try { localStorage.setItem(SC_TOGGLE_KEY, on ? "1" : "0"); } catch (e) {}
+  }
+  function refreshNotifyBtn() {
+    const b = document.getElementById("btnNotify");
+    if (b) { b.textContent = pushEnabled() ? "🔔 提醒开" : "🔕 提醒关"; b.classList.toggle("primary", pushEnabled()); }
+  }
+  function eventFingerprint(e) {
+    return ((e.stock && e.stock.code) || "?") + "|" + e.type + "|" + (e.date || "");
+  }
+  function eventTypeName(t) {
+    return t === "plan" ? "预案公告" : t === "record" ? "股权登记" : t === "ex" ? "除权除息" : "分红发放";
+  }
+  // 只推最近 7 天内公告、未来 90 天内发生的事件，避免历史数据刷屏
+  function collectNotifiableEvents(log) {
+    if (!pushEnabled()) return [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const min = today.getTime() - 7 * 86400000;
+    const max = today.getTime() + 90 * 86400000;
+    const out = [];
+    for (const st of state.stocks) {
+      if (!st.code) continue;
+      const recs = recsByCode[st.code] || [];
+      recordsToEvents(st, recs).forEach(e => {
+        if (!e.date) return;
+        const t = new Date(e.date).getTime();
+        if (t < min || t > max) return;
+        const fp = eventFingerprint(e);
+        if (log[fp]) return;
+        out.push({ fp, e });
+      });
+    }
+    return out;
+  }
+  function buildNotifyTitle(e) {
+    return "分红提醒：" + e.stock.name + " (" + e.stock.code + ")";
+  }
+  function buildNotifyDesp(e) {
+    const rec = e.rec || {};
+    const lines = [
+      "**" + e.stock.name + "**（" + e.stock.code + "）",
+      "",
+      "事件：" + eventTypeName(e.type),
+      "日期：" + e.date
+    ];
+    const plan = rec.planText || rec.IMPL_PLAN_PROFILE;
+    if (plan) lines.push("方案：" + plan);
+    const prog = rec.progress || rec.ASSIGN_PROGRESS;
+    if (prog) lines.push("进度：" + prog);
+    if (e.ps != null) lines.push("每股红利：¥" + e.ps.toFixed(4));
+    return lines.join("\n");
+  }
+  async function sendServerChan(title, desp) {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 10000);
+    try {
+      const r = await fetch(SC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ title, desp }),
+        signal: ctl.signal
+      });
+      return r.ok;
+    } catch (e) { return false; }
+    finally { clearTimeout(to); }
+  }
+  let notifyRunning = false;
+  async function checkAndNotify() {
+    if (notifyRunning) return;
+    notifyRunning = true;
+    try {
+      const log = loadPushLog();
+      // 首次使用：把当前已知事件静默记为已推送，后续只推「新增」事件，避免历史事件刷屏
+      if (!Object.keys(log).length) {
+        const base = {};
+        for (const st of state.stocks) {
+          if (!st.code) continue;
+          recordsToEvents(st, recsByCode[st.code] || []).forEach(e => { base[eventFingerprint(e)] = Date.now(); });
+        }
+        savePushLog(base);
+        return;
+      }
+      const pending = collectNotifiableEvents(log);
+      if (!pending.length) return;
+      let ok = 0;
+      for (const item of pending) {
+        const sent = await sendServerChan(buildNotifyTitle(item.e), buildNotifyDesp(item.e));
+        if (!sent) break; // 发送失败：本次不标记，下次打开页面自动重试
+        log[item.fp] = Date.now();
+        ok++;
+        savePushLog(log);
+        await new Promise(r => setTimeout(r, 12000)); // ServerChan 免费版约 5 条/分钟，分批发送
+      }
+      if (ok) toast("已推送 " + ok + " 条分红提醒到微信");
+    } catch (e) { /* 推送失败不影响页面 */ }
+    finally { notifyRunning = false; }
   }
 
   // JSONP：彻底绕过 CORS，东方财富 datacenter-web 接口支持 callback= 参数
@@ -787,6 +906,7 @@
     renderUpcoming();
     renderStocks();
     renderDivDates();
+    checkAndNotify(); // 发现新分红事件时推送 ServerChan 微信提醒
     document.getElementById("btnRefresh").textContent = "🔄 刷新分红";
     toast("分红数据已更新");
   }
@@ -1000,6 +1120,12 @@
   // 刷新：强制重拉实时接口拿最新公告；不清空 localStorage 缓存，
   // 这样即使实时接口瞬时失败，也能回退到上一次成功拉取的数据，避免分红事件闪没
   document.getElementById("btnRefresh").onclick = () => { fundCache = {}; build(true); };
+  // 微信推送开关：切换后立即生效，已推送记录保留
+  document.getElementById("btnNotify").addEventListener("click", () => {
+    setPushEnabled(!pushEnabled());
+    refreshNotifyBtn();
+    toast(pushEnabled() ? "已开启微信推送提醒" : "已关闭微信推送提醒");
+  });
 
   // 同步按钮事件
   document.getElementById("btnSync").addEventListener("click", () => {
@@ -1053,6 +1179,7 @@
   // 初始化：默认显示今天所在月份
   const now = new Date();
   viewY = now.getFullYear(); viewM = now.getMonth();
+  refreshNotifyBtn();
   build();
 
   document.addEventListener("visibilitychange", () => { if (!document.hidden && sync.enabled && sync.token && sync.room) pullSync(); });
