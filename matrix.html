@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>决策矩阵</title>
+<style>
+  :root {
+    --primary: #E03025;
+    --primary-soft: #fff0f0;
+    --up: #E03025;
+    --down: #16a34a;
+    --bg: #FAF8F0;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: 120px; padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px 56px; padding: 0 16px calc(56px + env(safe-area-inset-bottom)); }
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(255,255,255,.92); backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 720px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .back { background: none; border: none; font-size: 18px; color: var(--text); cursor: pointer; padding: 4px; }
+  .title { flex: 1; text-align: center; }
+  .title h1 { font-size: 17px; font-weight: 700; }
+  .title p { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: 16px; margin-top: 12px;
+  }
+  .section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .sub { font-size: 12px; color: var(--text-3); font-weight: 400; }
+
+  /* stat row */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+  .stat .num { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .num.up { color: var(--up); }
+  .stat .num.down { color: var(--down); }
+  .stat .label { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+
+  /* BOLL */
+  .boll-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .boll-title-block { flex: 1; }
+  .boll-title { font-size: 16px; font-weight: 800; color: var(--text); }
+  .boll-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .boll-tabs { display: inline-flex; gap: 2px; background: #f0ebe0; padding: 3px; border-radius: 20px; flex-shrink: 0; }
+  .boll-tabs button {
+    border: none; background: transparent; color: var(--text-2); font-size: 13px; padding: 5px 16px;
+    border-radius: 18px; cursor: pointer; font-family: var(--font);
+  }
+  .boll-tabs button.active { background: #fff; color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+  .boll-positions { display: flex; justify-content: center; gap: 24px; margin: 14px 0 10px; font-size: 13px; color: var(--text-3); }
+  .boll-positions span { display: flex; align-items: center; gap: 3px; }
+  .boll-positions span em { font-style: normal; font-weight: 600; }
+  .boll-positions span.active { color: var(--down); font-weight: 700; }
+  .boll-positions span.active em { color: var(--down); }
+  .boll-track-wrap { position: relative; margin-top: 26px; margin-bottom: 56px; }
+  .boll-marker-label { position: absolute; left: 50%; transform: translateX(-50%); top: -24px; color: var(--up); font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .boll-track { position: relative; height: 8px; border-radius: 4px; overflow: visible; }
+  .boll-track-lower { position: absolute; left: 0; right: 50%; top: 0; bottom: 0; background: linear-gradient(90deg, #baf7d0, #e6f9ee); border-radius: 4px 0 0 4px; }
+  .boll-track-upper { position: absolute; left: 50%; right: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffe6e4, #ffd5d2); border-radius: 0 4px 4px 0; }
+  .boll-dot { position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--primary); transform: translate(-50%, -50%); box-shadow: 0 2px 5px rgba(0,0,0,.18); z-index: 2; }
+  .boll-tick { position: absolute; top: 18px; font-size: 12px; color: var(--text); font-weight: 700; line-height: 1.35; }
+  .boll-tick .tick-label { font-size: 11px; color: var(--text-2); font-weight: 400; }
+  .boll-tick .tick-yield { font-size: 11px; color: var(--text-3); font-weight: 400; }
+  .boll-tick-lower { left: 0; text-align: left; transform: none; }
+  .boll-tick-mid { left: 50%; transform: translateX(-50%); text-align: center; }
+  .boll-tick-upper { right: 0; text-align: right; transform: none; }
+  .boll-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
+  .boll-zone { color: var(--text); font-weight: 600; }
+  .boll-dist { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+  .boll-dist.down { background: var(--down); }
+  .boll-dist.up { background: var(--up); }
+
+  /* yield matrix */
+  .matrix-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; text-align: center; }
+  .matrix-cell { background: var(--bg); border-radius: 8px; padding: 8px 2px; }
+  .matrix-cell .h { font-size: 12px; color: var(--text-2); }
+  .matrix-cell .p { font-size: 13px; font-weight: 700; margin-top: 3px; }
+  .matrix-cell .pct { font-size: 11px; margin-top: 2px; color: var(--up); }
+  .matrix-cell.current { outline: 2px solid var(--primary); background: var(--primary-soft); }
+  .matrix-note { font-size: 12px; color: var(--text-2); margin-top: 10px; }
+
+  /* add-sim table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-2); font-weight: 600; background: #fafafa; }
+  td input {
+    width: 56px; padding: 5px; border: 1px solid var(--border); border-radius: 6px;
+    text-align: center; font-family: var(--font); font-size: 13px;
+  }
+  .txt-up { color: var(--up); }
+  .txt-down { color: var(--down); }
+
+  /* chips */
+  .chip { border:1px solid var(--border); background:#fff; color:var(--text-2); border-radius:16px; padding:4px 12px; font-size:13px; cursor:pointer; font-family:var(--font); line-height:1.4; }
+  .chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+  /* history */
+  .history-head { display: flex; gap: 16px; margin-bottom: 12px; }
+  .history-head .hi { flex: 1; text-align: center; padding: 12px; background: var(--bg); border-radius: 10px; }
+  .history-head .hi .big { font-size: 20px; font-weight: 800; color: var(--primary); }
+  .history-head .hi .small { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .year-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .year-row:last-child { border-bottom: none; }
+  .year-row .y { font-weight: 600; width: 60px; }
+  .year-row .v { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .year-row .chg { font-size: 12px; width: 70px; text-align: right; }
+
+  .disclaimer { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 20px; padding: 0 12px; }
+  .empty { text-align: center; color: var(--text-3); padding: 30px 16px; }
+
+  @media (max-width: 640px) {
+    .matrix-grid { grid-template-columns: repeat(5, 1fr); }
+    .matrix-cell:nth-child(n+6) { display: none; }
+    .matrix-grid.expanded .matrix-cell:nth-child(n+6) { display: block; }
+    .boll-bands { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Bottom navigation ---- */
+  .bottom-nav {
+    box-sizing: border-box;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #fff; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around; align-items: flex-start;
+  }
+  .bottom-nav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 56px; gap: 3px; color: var(--text-3); text-decoration: none; font-size: 11px;
+    -webkit-tap-highlight-color: transparent; transition: color .15s;
+  }
+  .bottom-nav a.active { color: var(--primary); font-weight: 600; }
+  .bottom-nav svg {
+    width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s;
+  }
+  .bottom-nav a .icon-fill { fill: currentColor; stroke: none; }
+  @media (max-width: 360px) {
+    .bottom-nav a { font-size: 10px; }
+    .bottom-nav svg { width: 20px; height: 20px; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="back" onclick="history.back()">←</button>
+      <div class="title">
+        <h1 id="pageTitle">决策矩阵</h1>
+        <p id="pageSub">—</p>
+      </div>
+      <div style="width:28px"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="stat-row" id="quickStats"></div>
+    </div>
+
+    <div class="card">
+      <div class="boll-header">
+        <div class="boll-title-block">
+          <div class="boll-title" id="bollTitle">周 BOLL</div>
+          <div class="boll-sub" id="bollSub">前复权 · —</div>
+        </div>
+        <div class="boll-tabs" id="bollTabs">
+          <button data-boll="day">日</button>
+          <button data-boll="week" class="active">周</button>
+          <button data-boll="month">月</button>
+        </div>
+      </div>
+      <div class="boll-positions" id="bollPositions">
+        <span data-pos="day">日 <em>—</em></span>
+        <span data-pos="week" class="active">周 <em>—</em></span>
+        <span data-pos="month">月 <em>—</em></span>
+      </div>
+      <div id="bollBox">
+        <div class="boll-track-wrap">
+          <div class="boll-marker-label" id="bollMarkerLabel">现价 ¥—</div>
+          <div class="boll-track">
+            <div class="boll-track-lower"></div>
+            <div class="boll-track-upper"></div>
+            <div class="boll-dot" id="bollDot" style="left:50%"></div>
+            <div class="boll-tick boll-tick-lower" id="tickLower"></div>
+            <div class="boll-tick boll-tick-mid" id="tickMid"></div>
+            <div class="boll-tick boll-tick-upper" id="tickUpper"></div>
+          </div>
+        </div>
+        <div class="boll-footer">
+          <span class="boll-zone" id="bollZone">加载中…</span>
+          <span class="boll-dist" id="bollDist">距中轨 —</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">目标收益率矩阵 <span class="sub">当前价格对应不同目标股息率的买入参考价</span></div>
+      <div class="matrix-grid" id="yieldMatrix"></div>
+      <div class="matrix-note">左右滑动查看不同股息率目标下的买入价参考，当前价格对应的股息率已高亮标注。</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">模拟加仓 <span class="sub" id="simSub">在现有持仓上，从目标收益率逐档加仓，推演摊薄成本</span></div>
+      <div style="overflow:auto">
+        <table id="simTable">
+          <thead>
+            <tr><th>股息率</th><th>目标价</th><th>本档股数</th><th>累计</th><th>摊薄成本</th><th>较现成本</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--text-2)">
+        <span>步长</span>
+        <div id="stepPills" style="display:flex; gap:6px;">
+          <button class="chip active" data-step="0.5">0.5%</button>
+          <button class="chip" data-step="0.25">0.25%</button>
+        </div>
+        <span>加档</span>
+        <div id="extraChips" style="display:flex; gap:6px;"></div>
+      </div>
+      <p style="font-size:12px; color:var(--text-3); margin-top:8px">首档为现价（现价股息率 ≥ 5% 时可当下买入，否则等跌到 5%），之后每 0.5% 股息率为一档（目标价 = 每股红利 ÷ 股息率）；默认 4 档，可再加 3 档。每档股数可改，仅用于推演，不含手续费、不影响真实持仓。</p>
+    </div>
+
+    <div class="card">
+      <div class="section-title">历史分红 <span class="sub">已实施 / 已通过分配记录，每股派息为税前金额</span></div>
+      <div class="history-head" id="historyHead"></div>
+      <div id="historyBody"></div>
+    </div>
+
+    <div class="disclaimer">数据基于历史公开信息，不构成投资建议。<br>请在充分了解风险的基础上进行投资决策。</div>
+  </div>
+
+<script>
+  const KEY = "mmbf_stock_ledger_v2";
+  const qs = new URLSearchParams(location.search);
+  const stockId = qs.get("id");
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { stocks: [], trades: [] }; }
+    catch(e){ return { stocks: [], trades: [] }; }
+  }
+  function fmt(n, d=2) {
+    if (n == null || isNaN(n)) return "—";
+    return Number(n).toLocaleString("zh-CN", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function sign(n){ return n>0?"+":""; }
+  function marketOf(code) {
+    const c = String(code || "");
+    if (c.startsWith("5") || c.startsWith("6") || c.startsWith("9") || c.startsWith("11")) return "sh";
+    if (c.startsWith("8") || c.startsWith("4")) return "bj";
+    return "sz";
+  }
+  function isFundStock(s) {
+    return !!(s && (s.fundType === "场内基金" || s.fundType === "场外基金" || /^(ETF|LOF|基金)$/.test(s.sector||"")));
+  }
+
+  const state = loadState();
+  let stock = state.stocks.find(x => x.id === stockId);
+  if (!stock) {
+    // 兜底：支持通过 URL 参数直接打开分享链接（如 manmanbianfu.top/matrix?code=..&name=..&dividend=..&price=..）
+    const code = qs.get("code"), name = qs.get("name");
+    const priceP = qs.get("price"), divP = qs.get("dividend");
+    if (code && name) {
+      stock = {
+        id: "url", name, code,
+        price: Number(priceP) || 0, dividend: Number(divP) || 0,
+        isHK: qs.get("isHK") === "true", isUS: qs.get("isUS") === "true"
+      };
+    }
+  }
+  if (!stock) {
+    document.querySelector(".wrap").innerHTML = '<div class="empty">未找到该股票，<a href="index.html">返回首页</a></div>';
+    throw new Error("stock not found");
+  }
+
+  const price = Number(stock.price) || 0;
+  const dividend = Number(stock.dividend) || 0;
+  const cost = Number(stock.cost) || 0;
+  const shares = Number(stock.shares) || 0;
+  const curYield = price > 0 ? dividend / price * 100 : 0;
+  const costYield = cost > 0 ? dividend / cost * 100 : 0;
+
+  // 模拟加仓副标题：按是否已有持仓动态显示
+  document.getElementById("simSub").textContent =
+    (shares > 0 && cost > 0)
+      ? "在现有持仓上，从现价起逐档加仓，推演摊薄成本"
+      : "当前无持仓，从现价起逐档建仓，推演摊薄成本";
+
+  document.getElementById("pageTitle").textContent = stock.name + " 决策矩阵";
+  document.getElementById("pageSub").textContent = "代码 " + (stock.code||"") + " · 每股红利 ¥" + fmt(dividend,3);
+
+  document.getElementById("quickStats").innerHTML = `
+    <div class="stat"><div class="num">¥${fmt(price, isFundStock(stock)?3:2)}</div><div class="label">当前价格</div></div>
+    <div class="stat"><div class="num ${curYield>=5?'up':''}">${fmt(curYield,2)}%</div><div class="label">当前股息率</div></div>
+    <div class="stat"><div class="num">¥${fmt(dividend,3)}</div><div class="label">每股红利</div></div>
+  `;
+
+  // ---------- BOLL ----------
+  // 腾讯前复权 K 线（CORS 可用）：Data 格式 data.{code}.qfqday/qfqweek/qfqmonth = [[date,open,close,high,low,volume],...]
+  const bollCache = {};
+  async function fetchKline(mode) {
+    const mkt = marketOf(stock.code) === "sh" ? "sh" : "sz";
+    const code = mkt + stock.code;
+    const period = mode === "day" ? "day" : (mode === "month" ? "month" : "week");
+    const field = "qfq" + period;
+    const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},2020-01-01,2026-12-31,640,qfq`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const list = (j.data && j.data[code] && j.data[code][field]) || [];
+    return list.map(item => ({ date: item[0], close: +item[2] }));
+  }
+  async function ensureBoll(mode) {
+    if (bollCache[mode]) return bollCache[mode];
+    const data = await fetchKline(mode);
+    const closes = data.map(d => d.close);
+    const b = boll(closes, 20);
+    const last = data[data.length - 1] || {};
+    const res = { data, closes, b, lastDate: last.date || "—" };
+    bollCache[mode] = res;
+    return res;
+  }
+  function boll(closes, n=20) {
+    if (closes.length < n) return null;
+    const slice = closes.slice(-n);
+    const ma = slice.reduce((a,b)=>a+b,0)/n;
+    const variance = slice.reduce((a,b)=>a+Math.pow(b-ma,2),0)/n;
+    const std = Math.sqrt(variance);
+    return { upper: ma+2*std, middle: ma, lower: ma-2*std };
+  }
+  function bollPosLabel(price, b) {
+    if (!b || !isFinite(b.upper) || !isFinite(b.middle) || !isFinite(b.lower)) return "—";
+    if (price > b.upper) return "上";
+    if (price > b.middle) return "中上";
+    if (price >= b.lower) return "中下";
+    return "下";
+  }
+  function bollZone(price, b) {
+    if (!b || !isFinite(b.upper) || !isFinite(b.middle) || !isFinite(b.lower)) return "—";
+    if (price > b.upper) return "上轨上方";
+    if (price > b.middle) return "中上轨之间";
+    if (price >= b.lower) return "中下轨之间";
+    return "下轨下方";
+  }
+  async function updatePositions() {
+    const modes = ["day", "week", "month"];
+    const labels = {};
+    await Promise.all(modes.map(async m => {
+      try {
+        const res = await ensureBoll(m);
+        labels[m] = bollPosLabel(price, res.b);
+      } catch (e) { labels[m] = "—"; }
+    }));
+    const names = { day: "日", week: "周", month: "月" };
+    const box = document.getElementById("bollPositions");
+    if (box) {
+      box.innerHTML = modes.map(m => {
+        const active = m === (document.querySelector("#bollTabs button.active")?.dataset.boll || "week");
+        return `<span data-pos="${m}" class="${active ? 'active' : ''}">${names[m]} <em>${labels[m]}</em></span>`;
+      }).join("");
+    }
+  }
+  async function renderBoll(mode) {
+    const titleMap = { day: "日 BOLL", week: "周 BOLL", month: "月 BOLL" };
+    document.getElementById("bollTitle").textContent = titleMap[mode] || "周 BOLL";
+    const box = document.getElementById("bollBox");
+    // 保持骨架可见，避免闪烁
+    document.getElementById("bollMarkerLabel").textContent = `现价 ¥${fmt(price, isFundStock(stock)?3:2)}`;
+    try {
+      const { b, lastDate } = await ensureBoll(mode);
+      document.getElementById("bollSub").textContent = `前复权 · ${lastDate}`;
+      if (!b || !price || !isFinite(b.upper) || !isFinite(b.middle) || !isFinite(b.lower)) {
+        box.innerHTML = '<div class="empty">数据不足或暂无法获取 BOLL</div>'; return;
+      }
+      const width = b.upper - b.lower;
+      const pct = width > 0 ? Math.max(0, Math.min(100, (price - b.lower) / width * 100)) : 50;
+      const distMid = price > 0 ? (price - b.middle) / b.middle * 100 : 0;
+      const yieldOf = p => p > 0 ? dividend / p * 100 : 0;
+      const priceD = isFundStock(stock) ? 3 : 2;
+      document.getElementById("bollDot").style.left = pct + "%";
+      document.getElementById("tickLower").innerHTML = `¥${fmt(b.lower, priceD)}<div class="tick-label">下轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.lower),2)}%</div>`;
+      document.getElementById("tickMid").innerHTML = `¥${fmt(b.middle, priceD)}<div class="tick-label">中轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.middle),2)}%</div>`;
+      document.getElementById("tickUpper").innerHTML = `¥${fmt(b.upper, priceD)}<div class="tick-label">上轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.upper),2)}%</div>`;
+      document.getElementById("bollZone").textContent = bollZone(price, b);
+      const distEl = document.getElementById("bollDist");
+      distEl.textContent = `距中轨 ${distMid >= 0 ? '+' : ''}${fmt(distMid, 2)}%`;
+      distEl.className = "boll-dist " + (distMid < 0 ? "down" : "up");
+    } catch(e) {
+      box.innerHTML = '<div class="empty">BOLL 数据获取失败</div>';
+    }
+  }
+  document.getElementById("bollTabs").addEventListener("click", e => {
+    if (e.target.dataset.boll) {
+      document.querySelectorAll("#bollTabs button").forEach(b => b.classList.toggle("active", b === e.target));
+      updatePositions();
+      renderBoll(e.target.dataset.boll);
+    }
+  });
+  renderBoll("week");
+  updatePositions();
+
+  // ---------- Yield matrix ----------
+  const yields = [3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.0];
+  function renderMatrix() {
+    const box = document.getElementById("yieldMatrix");
+    if (!dividend || !price) { box.innerHTML = '<div class="empty">缺少每股红利或现价</div>'; return; }
+    let html = "";
+    yields.forEach(y => {
+      const tp = dividend / (y/100);
+      const premium = (price - tp) / tp * 100;
+      const current = Math.abs(curYield - y) < 0.25;
+      const pctTxt = premium > 0.05 ? `高 ${fmt(premium,1)}%` : premium < -0.05 ? `低 ${fmt(-premium,1)}%` : `平`;
+      html += `
+        <div class="matrix-cell ${current?'current':''}">
+          <div class="h">${y.toFixed(1)}%</div>
+          <div class="p">¥${fmt(tp, isFundStock(stock)?3:2)}</div>
+          <div class="pct">${pctTxt}</div>
+        </div>`;
+    });
+    box.innerHTML = html;
+  }
+  renderMatrix();
+
+  // ---------- Simulated adding positions ----------
+  let simStep = 0.5;
+  let extraYields = []; // 用户手动加档的收益率
+  const rowShares = {}; // 各档股数缓存：{ yield: shares }
+
+  function autoStartYield() {
+    // 参考站逻辑：现价股息率 ≥ 5% 时首档为现价，否则从 5% 起
+    if (curYield >= 5) return Math.round(curYield * 100) / 100;
+    return 5.0;
+  }
+  function defaultYields() {
+    const start = autoStartYield();
+    const arr = [];
+    for (let i = 0; i < 4; i++) arr.push(+(start + i * simStep).toFixed(2));
+    return arr;
+  }
+  function possibleExtraYields() {
+    const start = autoStartYield();
+    const arr = [];
+    for (let i = 4; i < 7; i++) arr.push(+(start + i * simStep).toFixed(2));
+    return arr;
+  }
+  function renderStepPills() {
+    document.querySelectorAll("#stepPills .chip").forEach(btn => {
+      btn.classList.toggle("active", +btn.dataset.step === simStep);
+    });
+  }
+  function renderExtraChips() {
+    const box = document.getElementById("extraChips");
+    const ys = possibleExtraYields();
+    box.innerHTML = ys.map(y => {
+      const active = extraYields.includes(y);
+      return `<button class="chip ${active?'active':''}" data-yield="${y}">${y.toFixed(2)}%</button>`;
+    }).join("");
+  }
+
+  function renderSim() {
+    const tbody = document.querySelector("#simTable tbody");
+    if (!dividend) { tbody.innerHTML = '<tr><td colspan="6">缺少每股红利数据</td></tr>'; return; }
+
+    const yields = defaultYields().concat(extraYields).sort((a,b)=>a-b);
+    // 初始化默认股数：首档 100，其余 0
+    yields.forEach((y, i) => {
+      if (!(y in rowShares)) rowShares[y] = (i === 0 ? 100 : 0);
+    });
+
+    let rows = [];
+    if (shares > 0 && cost > 0) {
+      rows.push({ yield: costYield, price: cost, shares: shares, isBase: true });
+    }
+    yields.forEach(y => {
+      rows.push({ yield: y, price: dividend / (y/100), shares: rowShares[y] || 0, isBase: false });
+    });
+
+    let cumShares = 0, cumCost = 0;
+    rows.forEach(r => {
+      cumShares += r.shares;
+      cumCost += r.shares * r.price;
+      r.cumShares = cumShares;
+      r.avgCost = cumShares > 0 ? cumCost / cumShares : 0;
+      r.cumCost = cumCost;
+    });
+
+    const baseCost = (shares > 0 && cost > 0) ? cost : price;
+    tbody.innerHTML = rows.map(r => {
+      const trancheAmount = r.shares * r.price;
+      let chgHtml = "—";
+      if (!r.isBase && baseCost > 0) {
+        const chg = (r.avgCost - baseCost) / baseCost * 100;
+        if (chg < -0.005) chgHtml = `<span class="txt-down">↓${fmt(-chg,2)}%</span>`;
+        else if (chg > 0.005) chgHtml = `<span class="txt-up">↑${fmt(chg,2)}%</span>`;
+      }
+      const sharesCell = r.isBase
+        ? fmt(r.shares,0)
+        : `<input type="number" step="100" value="${r.shares}" data-yield="${r.yield}" style="width:64px;padding:5px;border:1px solid var(--border);border-radius:6px;text-align:center;font-family:var(--font);font-size:13px">`;
+      return `<tr>
+        <td>${fmt(r.yield,2)}% ${r.isBase?'<span style="font-size:11px;color:var(--text-3)">(成本)</span>':''}</td>
+        <td>¥${fmt(r.price, isFundStock(stock)?3:2)}</td>
+        <td>${sharesCell}${!r.isBase ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">¥${fmt(trancheAmount,2)}</div>` : ''}</td>
+        <td>${fmt(r.cumShares,0)}<div style="font-size:11px;color:var(--text-3);margin-top:2px">¥${fmt(r.cumCost,2)}</div></td>
+        <td>¥${fmt(r.avgCost, isFundStock(stock)?3:2)}</td>
+        <td>${chgHtml}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  document.getElementById("stepPills").addEventListener("click", e => {
+    if (e.target.dataset.step != null) {
+      simStep = +e.target.dataset.step;
+      extraYields = [];
+      Object.keys(rowShares).forEach(k => delete rowShares[k]);
+      renderStepPills();
+      renderExtraChips();
+      renderSim();
+    }
+  });
+  document.getElementById("extraChips").addEventListener("click", e => {
+    if (e.target.dataset.yield != null) {
+      const y = +e.target.dataset.yield;
+      const idx = extraYields.indexOf(y);
+      if (idx >= 0) extraYields.splice(idx, 1);
+      else extraYields.push(y);
+      renderExtraChips();
+      renderSim();
+    }
+  });
+  document.querySelector("#simTable tbody").addEventListener("input", e => {
+    if (e.target.dataset.yield != null) {
+      rowShares[+e.target.dataset.yield] = +e.target.value || 0;
+      renderSim();
+    }
+  });
+  renderStepPills();
+  renderExtraChips();
+  renderSim();
+
+  // ---------- Historical dividends ----------
+  function yearOfDate(d) { return d ? new Date(String(d)).getFullYear() : null; }
+  async function fetchStockDivByYear() {
+    const url = `https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_SHAREBONUS_DET&columns=ALL&filter=(SECURITY_CODE="${stock.code}")&pageSize=500&pageNumber=1&sortColumns=REPORT_DATE&sortTypes=-1&source=WEB&client=WEB`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const data = (j.result && j.result.data) || [];
+    const byYear = {};
+    data.forEach(rec => {
+      const y = yearOfDate(rec.REPORT_DATE || rec.EX_DIVIDEND_DATE);
+      if (y == null || rec.PRETAX_BONUS_RMB == null || isNaN(rec.PRETAX_BONUS_RMB)) return;
+      byYear[y] = (byYear[y] || 0) + Number(rec.PRETAX_BONUS_RMB) / 10;
+    });
+    return byYear;
+  }
+  function fetchFundDivByYear() {
+    return new Promise((resolve) => {
+      const sc = document.createElement("script");
+      let settled = false;
+      const finish = res => { if (settled) return; settled = true; sc.remove(); resolve(res); };
+      sc.onerror = () => finish({});
+      sc.onload = () => {
+        try {
+          const arr = window.Data_netWorthTrend;
+          if (!Array.isArray(arr)) return finish({});
+          const byYear = {};
+          for (const it of arr) {
+            if (it.unitMoney) {
+              const m = /每份派现金([\d.]+)元/.exec(it.unitMoney);
+              if (!m) continue;
+              let y = null;
+              if (typeof it.x === "number") y = new Date(it.x).getFullYear();
+              else if (it.date) y = new Date(String(it.date)).getFullYear();
+              if (y != null) byYear[y] = (byYear[y] || 0) + parseFloat(m[1]);
+            }
+          }
+          finish(byYear);
+        } catch(e) { finish({}); }
+      };
+      sc.src = "https://fund.eastmoney.com/pingzhongdata/" + encodeURIComponent(stock.code) + ".js";
+      document.head.appendChild(sc);
+    });
+  }
+  async function renderHistory() {
+    const head = document.getElementById("historyHead");
+    const body = document.getElementById("historyBody");
+    let byYear = {};
+    try {
+      byYear = isFundStock(stock) ? await fetchFundDivByYear() : await fetchStockDivByYear();
+    } catch(e) { byYear = {}; }
+    const years = Object.keys(byYear).map(Number).sort((a,b)=>b-a);
+    if (!years.length) { body.innerHTML = '<div class="empty">暂无历史分红数据</div>'; return; }
+    // continuous years
+    const curYear = new Date().getFullYear();
+    let continuous = 0, y = curYear;
+    while (byYear[y] > 0) { continuous++; y--; }
+    if (!continuous) {
+      y = years[0];
+      while (byYear[y] > 0) { continuous++; y--; }
+    }
+    // 5-year avg
+    const last5 = years.filter(y => y >= curYear - 4);
+    const avg5 = last5.length ? last5.reduce((a,y)=>a+byYear[y],0) / last5.length : 0;
+    head.innerHTML = `
+      <div class="hi"><div class="big">${continuous}</div><div class="small">连续派息年数</div></div>
+      <div class="hi"><div class="big">¥${fmt(avg5,3)}</div><div class="small">近5年均每股派息</div></div>
+    `;
+    body.innerHTML = years.map((y, i) => {
+      const v = byYear[y];
+      const prev = byYear[y-1];
+      let chg = "";
+      if (prev > 0) {
+        const pct = (v - prev) / prev * 100;
+        chg = `<span class="chg ${pct>=0?'txt-up':'txt-down'}">${sign(pct)}${fmt(pct,1)}%</span>`;
+      }
+      return `<div class="year-row"><span class="y">${y}</span><span class="v">¥${fmt(v,3)}</span>${chg}</div>`;
+    }).join("");
+  }
+  renderHistory();
+</script>
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" class="icon-fill"><circle cx="12" cy="12" r="6"/></svg>
+    <span>持仓</span>
+  </a>
+  <a href="watchlist.html" class="active">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>自选</span>
+  </a>
+  <a href="returns.html">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>收益</span>
+  </a>
+  <a href="sectors.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>板块</span>
+  </a>
+  <a href="calendar.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>日历</span>
+  </a>
+</nav>
+</body>
+</html>

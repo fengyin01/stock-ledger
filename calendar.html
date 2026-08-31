@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>慢慢变富 · 分红日历</title>
+<style>
+  :root {
+    --primary: #E03025;
+    --primary-soft: #fff0f0;
+    --up: #E03025;
+    --down: #16a34a;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --blue-tag: #eff6ff; --blue-text: #2563eb;
+    --sync-on: #16a34a; --sync-busy: #f59e0b; --sync-fail: #dc2626;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    padding-bottom: 120px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px 40px; padding: 0 16px calc(40px + env(safe-area-inset-bottom)); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(255,255,255,.92); backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 960px; margin: 0 auto; padding: 10px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .topbar h1 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .topbar-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .link-like {
+    background: none; border: none; color: var(--text-2); cursor: pointer;
+    font-size: 14px; font-family: var(--font); padding: 6px 10px; border-radius: 8px;
+    text-decoration: none; transition: background .15s, color .15s;
+  }
+  .link-like:hover { background: var(--bg); color: var(--text); }
+  .link-like.primary { color: var(--primary); font-weight: 600; }
+  .link-like:disabled, .link-like.disabled { color: var(--text-3); opacity: .6; cursor: not-allowed; }
+  .link-like:disabled:hover { background: none; color: var(--text-3); }
+
+  .section-title { font-size: 15px; font-weight: 700; margin: 22px 0 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .sub { font-size: 12px; font-weight: 400; color: var(--text-3); }
+
+  /* stat cards */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .stat .label { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .stat .value { font-size: 20px; font-weight: 700; }
+  .stat .value small { font-size: 12px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+  .stat.accent .value { color: var(--primary); }
+
+  /* calendar */
+  .cal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 16px; }
+  .cal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .cal-head .month { font-size: 18px; font-weight: 700; min-width: 132px; text-align: center; }
+  .cal-nav { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 16px; color: var(--text); }
+  .cal-nav:hover { background: var(--bg); }
+  .cal-today { margin-left: auto; font-size: 13px; color: var(--primary); border: 1px solid var(--primary-soft); background: var(--primary-soft); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.plan { background: #93c5fd; }
+  .dot.record { background: var(--blue-text); }
+  .dot.ex { background: var(--primary); }
+  .dot.pay { background: #10b981; }
+
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .grid .wd { text-align: center; font-size: 12px; color: var(--text-3); padding: 4px 0; }
+  .cell {
+    min-height: 64px; border: 1px solid var(--border); border-radius: 10px; padding: 5px 6px;
+    background: #fff; cursor: pointer; transition: background .12s; display: flex; flex-direction: column; gap: 3px;
+    min-width: 0; /* 允许 grid item 在窄屏下压缩，防止横向溢出 */
+  }
+  .cell:hover { background: #fafafa; }
+  .cell.other { background: #fafafa; opacity: .55; }
+  .cell.today { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .cell .dnum { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .cell.today .dnum { color: var(--primary); }
+  .chip { font-size: 10.5px; line-height: 1.3; padding: 1px 5px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; box-sizing: border-box; }
+  .chip.plan { background: #eff6ff; color: #1d4ed8; }
+  .chip.record { background: #dbeafe; color: #1e40af; }
+  .chip.ex { background: var(--primary-soft); color: var(--primary); }
+  .chip.pay { background: #ecfdf5; color: #047857; }
+  .more { font-size: 10px; color: var(--text-3); }
+
+  /* lists */
+  .list-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 6px 4px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .item:last-child { border-bottom: none; }
+  .item .date { width: 56px; text-align: center; flex-shrink: 0; }
+  .item .date .d1 { font-size: 16px; font-weight: 700; }
+  .item .date .d2 { font-size: 11px; color: var(--text-3); }
+  .item .body { flex: 1; min-width: 0; }
+  .item .body .t1 { font-weight: 600; }
+  .item .body .t2 { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+  .tag.plan { background: #eff6ff; color: #1d4ed8; }
+  .tag.record { background: #dbeafe; color: #1e40af; }
+  .tag.ex { background: var(--primary-soft); color: var(--primary); }
+  .tag.pay { background: #ecfdf5; color: #047857; }
+  .item .amt { font-weight: 700; color: var(--down); flex-shrink: 0; font-size: 13px; }
+
+  /* 预计分红日（股权登记 / 除权除息）—— 每只持仓一行，确保股票与 ETF 都显示这两列 */
+  .div-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .div-row:last-child { border-bottom: none; }
+  .div-row .nm { font-weight: 600; white-space: nowrap; }
+  .div-row .nm .cd { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 4px; }
+  .div-row .cols { flex: 1; display: flex; gap: 18px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; min-width: 0; }
+  .div-row .cols b { color: var(--text); font-weight: 600; }
+  .div-row .k { font-size: 11px; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+  .div-row .k.next { background: var(--primary-soft); color: var(--primary); }
+  .div-row .k.last { background: var(--bg); color: var(--text-2); }
+  @media (max-width: 640px) {
+    .div-row { flex-wrap: wrap; gap: 8px; }
+    .div-row .cols { width: 100%; gap: 10px; }
+  }
+
+  .stock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stock-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+  .stock-card .nm { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .stock-card .nm .cd { font-size: 11px; color: var(--text-3); font-weight: 400; }
+  .stock-card .plan { margin: 8px 0 6px; font-size: 13px; color: var(--text); font-weight: 600; }
+  .stock-card .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 12px; color: var(--text-2); }
+  .stock-card .meta b { color: var(--text); font-weight: 600; }
+  .stock-card .prog { display: inline-block; margin-top: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--gray-tag); color: var(--gray-text); }
+  .stock-card .prog.done { background: #ecfdf5; color: #047857; }
+
+  .empty { text-align: center; color: var(--text-3); padding: 40px 16px; }
+  .empty a { color: var(--primary); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: #111827; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* modal */
+  .mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .mask.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 440px; max-height: 80vh; overflow: auto; padding: 20px; }
+  .modal h3 { font-size: 16px; margin-bottom: 14px; }
+  .modal .day-ev { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .modal .day-ev .h { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .modal .day-ev .r { font-size: 12px; color: var(--text-2); margin-top: 6px; line-height: 1.7; }
+  .btn-close { margin-top: 8px; width: 100%; padding: 10px; border: none; border-radius: 10px; background: var(--bg); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 0 12px; }
+    .topbar-inner { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+    .topbar h1 { font-size: 15px; }
+    .topbar-actions { gap: 6px; margin-left: 0; }
+    .link-like { padding: 4px 8px; font-size: 13px; }
+    .section-title { flex-wrap: wrap; gap: 4px; font-size: 14px; }
+    .section-title .sub { width: 100%; margin-top: 2px; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat { padding: 10px 12px; }
+    .stat .value { font-size: 17px; }
+    .stock-grid { grid-template-columns: 1fr; }
+    .cal-card { padding: 12px; }
+    .cal-head { gap: 8px; margin-bottom: 10px; }
+    .cal-head .month { font-size: 16px; min-width: 110px; }
+    .cal-nav { width: 30px; height: 30px; font-size: 14px; }
+    .grid { gap: 4px; }
+    .cell { min-height: 48px; padding: 3px 4px; gap: 2px; }
+    .cell .dnum { font-size: 10px; }
+    .chip { font-size: 9px; padding: 1px 3px; border-radius: 4px; }
+    .more { font-size: 9px; }
+    .legend { flex-direction: column; gap: 6px; margin-top: 10px; }
+    .list-card .item { padding: 10px 12px; gap: 10px; }
+    .item .date { width: 46px; }
+    .item .date .d1 { font-size: 14px; }
+    .item .body .t1 { font-size: 13px; }
+    .item .amt { font-size: 12px; }
+    .stock-card { padding: 12px; }
+    .stock-card .meta { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* ---- Bottom navigation ---- */
+  .bottom-nav {
+    box-sizing: border-box;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #fff; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around; align-items: flex-start;
+  }
+  .bottom-nav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 56px; gap: 3px; color: var(--text-3); text-decoration: none; font-size: 11px;
+    -webkit-tap-highlight-color: transparent; transition: color .15s;
+  }
+  .bottom-nav a.active { color: var(--primary); font-weight: 600; }
+  .bottom-nav svg {
+    width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s;
+  }
+  .bottom-nav a .icon-fill { fill: currentColor; stroke: none; }
+  @media (max-width: 360px) {
+    .bottom-nav a { font-size: 10px; }
+    .bottom-nav svg { width: 20px; height: 20px; }
+  }
+  /* 多端同步 */
+  .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); margin-left: 0; vertical-align: middle; box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
+  .sync-dot.on { background: var(--sync-on); }
+  .sync-dot.busy { background: var(--sync-busy); }
+  .sync-dot.fail { background: var(--sync-fail); }
+  .sync-mask { position: fixed; inset: 0; background: rgba(17,24,39,.45); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .sync-mask.open { display: flex; }
+  .sync-sheet { width: 100%; max-width: 420px; max-height: 86vh; overflow-y: auto; background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .sync-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sync-head h3 { font-size: 17px; margin: 0; }
+  .sync-close { background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-2); line-height: 1; }
+  .sync-hint { font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+  .sync-field { margin-bottom: 12px; }
+  .sync-field label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 5px; }
+  .sync-field input { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; }
+  .sync-foot { display: flex; gap: 10px; margin-top: 6px; }
+  .sync-btn { flex: 1; font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; }
+  .sync-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .sync-btn.danger { color: #b91c1c; border-color: #fecaca; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <h1>📅 分红日历</h1>
+      <div class="topbar-actions">
+        <a class="link-like" href="index.html">← 记账主页</a>
+        <button class="link-like" id="btnSync">🔗 同步</button><span class="sync-dot" id="syncDot" title="未同步"></span>
+        <button class="link-like primary" id="btnRefresh">🔄 刷新分红</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stat-row" id="stats"></div>
+
+    <div class="section-title">分红月历 <span class="sub">数据来源：东方财富（股票）/ fund_dividends.json 快照（ETF，含登记·除息·发放日）· 按当前持仓自动拉取</span></div>
+    <div class="cal-card">
+      <div class="cal-head">
+        <button class="cal-nav" id="prevM">◀</button>
+        <div class="month" id="monthLabel">—</div>
+        <button class="cal-nav" id="nextM">▶</button>
+        <button class="cal-today" id="toToday">今天</button>
+      </div>
+      <div class="grid" id="weekHead"></div>
+      <div class="grid" id="calGrid" style="margin-top:6px"></div>
+      <div class="legend">
+        <span><i class="dot plan"></i> 预案公告</span>
+        <span><i class="dot record"></i> 股权登记（含权最后一天）</span>
+        <span><i class="dot ex"></i> 除权除息</span>
+        <span><i class="dot pay"></i> 分红发放</span>
+      </div>
+    </div>
+
+    <div class="section-title">即将到账 <span class="sub">未来 90 天分红事件（除息 / 发放）</span></div>
+    <div class="list-card" id="upcoming"></div>
+
+    <div class="section-title">持仓分红概览 <span class="sub">当前持仓（含股票与 ETF）最新分红信息</span></div>
+    <div class="stock-grid" id="stockGrid"></div>
+
+    <div class="section-title">预计分红日 <span class="sub">股权登记日 / 除权除息日 · 按当前持仓（股票 + ETF）自动拉取 · 有未来记录显示「下次」，否则显示「最近」一次</span></div>
+    <div class="list-card" id="divDates"></div>
+
+    <div style="height:24px"></div>
+  </div>
+
+  <div class="mask" id="dayMask">
+    <div class="modal">
+      <h3 id="dayTitle">—</h3>
+      <div id="dayBody"></div>
+      <button class="btn-close" onclick="document.getElementById('dayMask').classList.remove('show')">关闭</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 多端同步设置弹窗 -->
+  <div class="sync-mask" id="syncMask">
+    <div class="sync-sheet">
+      <div class="sync-head">
+        <h3>多端同步设置</h3>
+        <button class="sync-close" data-close="syncMask">✕</button>
+      </div>
+      <div class="sync-hint" id="syncStatus">未开启同步 · 数据仅保存在本机浏览器</div>
+      <div class="sync-field">
+        <label>GitHub 令牌（需 gist 权限，仅本机保存）</label>
+        <input id="syncToken" type="password" placeholder="粘贴你的 GitHub Personal Access Token" autocomplete="off" />
+      </div>
+      <div class="sync-field">
+        <label>同步码（留空=新建一份账本；填入另一台设备的同步码=加入同一份账本）</label>
+        <input id="syncRoom" placeholder="留空自动生成，或粘贴另一台设备的同步码" />
+      </div>
+      <div class="sync-field">
+        <label>本机设备名（便于辨识）</label>
+        <input id="syncDevice" placeholder="如：我的手机 / 办公室电脑" />
+      </div>
+      <div class="sync-foot">
+        <button class="sync-btn danger" id="syncDisable">关闭同步</button>
+        <button class="sync-btn primary" id="syncEnable">启用并同步</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const KEY = "mmbf_stock_ledger_v2";
+  const CACHE_KEY = "mmbf_div_cache_v1";
+  const API = "https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_SHAREBONUS_DET&columns=ALL&filter=(SECURITY_CODE=\"{CODE}\")&pageSize=60&pageNumber=1&sortColumns=REPORT_DATE&sortTypes=-1&source=WEB&client=WEB";
+  const CACHE_TTL = 6 * 3600 * 1000; // 6 小时
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { stocks: [], trades: [], deleted: [] }; }
+    catch (e) { return { stocks: [], trades: [], deleted: [] }; }
+  }
+  function loadCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || { ts: 0, byCode: {} }; }
+    catch (e) { return { ts: 0, byCode: {} }; }
+  }
+  function saveCache(c) { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); }
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  const state = loadState();
+  function saveState(opts) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  let cache = loadCache();
+
+  // ---------- 多端实时同步（与持仓页一致，共享 state.json） ----------
+  const SYNC_KEY = "mmbf_sync_cfg_v1";
+  const sync = { enabled: false, token: "", room: "", device: "", lastSeen: 0, timer: null };
+  function loadSyncCfg() {
+    try { const c = JSON.parse(localStorage.getItem(SYNC_KEY)); if (c) Object.assign(sync, c); } catch(e){}
+  }
+  function saveSyncCfg() {
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ enabled: sync.enabled, token: sync.token, room: sync.room, device: sync.device, lastSeen: sync.lastSeen }));
+  }
+  function setDot(cls, title) {
+    const d = document.getElementById("syncDot");
+    if (d) { d.className = "sync-dot" + (cls ? " " + cls : ""); d.title = title || ""; }
+  }
+  // 把同步异常映射为可读文案；失败时状态点用独立红色（.fail），与“进行中”（琥珀）区分
+  function syncErrMsg(e) {
+    if (e && e.status === 401) return "同步失败：GitHub 令牌无效或已过期";
+    if (e && e.status === 403) return "同步失败：令牌缺少 gist 权限";
+    if (e && e.status === 404) return "同步失败：同步码（Gist ID）不存在";
+    if (e && e.status === "timeout") return "同步失败：请求超时，请检查网络";
+    return "同步失败：GitHub 不可达或网络异常";
+  }
+  let suppressPush = false;
+  function mergeArr(a, b) {
+    const m = new Map();
+    (a||[]).forEach(r => m.set(r.id, r));
+    (b||[]).forEach(r => {
+      const cur = m.get(r.id);
+      const rt = r.updatedAt || 0, ct = cur ? (cur.updatedAt || 0) : -1;
+      if (!cur || rt > ct) m.set(r.id, r);
+    });
+    return Array.from(m.values());
+  }
+  function applyDeleted(s) {
+    const del = new Set(s.deleted || []);
+    s.stocks = (s.stocks || []).filter(x => !del.has(x.id));
+    s.trades = (s.trades || []).filter(x => !del.has(x.id));
+    return s;
+  }
+  function gistHeaders() {
+    return {
+      "Authorization": "Bearer " + sync.token,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+  }
+  const GIST_FILE = "state.json";
+  async function gistFetchState() {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const res = await fetch("https://api.github.com/gists/" + encodeURIComponent(sync.room) + "?t=" + Date.now(), { headers: gistHeaders(), cache: "no-store", signal: ctrl.signal });
+      if (res.status === 404) return null;
+      if (!res.ok) { const err = new Error("http"); err.status = res.status; throw err; }
+      const data = await res.json();
+      const f = data.files && data.files[GIST_FILE];
+      if (!f || f.content == null) return { stocks: [], trades: [], deleted: [] };
+      try { return JSON.parse(f.content); } catch (e) { return { stocks: [], trades: [], deleted: [] }; }
+    } catch (e) {
+      if (e && e.name === "AbortError") { const err = new Error("timeout"); err.status = "timeout"; throw err; }
+      throw e;
+    } finally { clearTimeout(to); }
+  }
+  async function gistPushState() {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const content = JSON.stringify({ stocks: state.stocks, trades: state.trades, deleted: state.deleted || [] });
+      const res = await fetch("https://api.github.com/gists/" + encodeURIComponent(sync.room), {
+        method: "PATCH", headers: gistHeaders(),
+        body: JSON.stringify({ files: { [GIST_FILE]: { content } } }),
+        signal: ctrl.signal
+      });
+      if (!res.ok) { const err = new Error("http"); err.status = res.status; throw err; }
+    } catch (e) {
+      if (e && e.name === "AbortError") { const err = new Error("timeout"); err.status = "timeout"; throw err; }
+      throw e;
+    } finally { clearTimeout(to); }
+  }
+  async function gistCreate() {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const content = JSON.stringify({ stocks: state.stocks, trades: state.trades, deleted: state.deleted || [] });
+      const res = await fetch("https://api.github.com/gists", {
+        method: "POST", headers: gistHeaders(),
+        body: JSON.stringify({ description: "stock-ledger-sync", public: false, files: { [GIST_FILE]: { content } } }),
+        signal: ctrl.signal
+      });
+      if (!res.ok) { const err = new Error("http"); err.status = res.status; throw err; }
+      const data = await res.json();
+      return data.id;
+    } catch (e) {
+      if (e && e.name === "AbortError") { const err = new Error("timeout"); err.status = "timeout"; throw err; }
+      throw e;
+    } finally { clearTimeout(to); }
+  }
+  // 用合并后的最新 state 重建分红事件并刷新界面；渲染异常不影响“网络已同步”的状态判定
+  async function rebuildAndRender() {
+    const evs = [];
+    for (const st of state.stocks) {
+      if (!st.code) continue;
+      let recs = recsByCode[st.code]; // 复用 build() 已缓存的分红记录，避免每次轮询都联网
+      if (!recs) recs = isFundStock(st) ? await getFundRecords(st) : await getStockRecords(st);
+      recsByCode[st.code] = recs;
+      evs.push(...recordsToEvents(st, recs));
+    }
+    allEvents = evs;
+    eventsByDate = {};
+    evs.forEach(e => { (eventsByDate[e.date] = eventsByDate[e.date] || []).push(e); });
+    renderStats(); renderCalendar(); renderUpcoming(); renderStocks(); renderDivDates();
+  }
+  function nowTime() { return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }); }
+  async function pushSync() {
+    if (!sync.enabled || !sync.token || !sync.room) return;
+    suppressPush = true;
+    setDot("busy", "同步中…");
+    try {
+      const remote = await gistFetchState();
+      if (remote) {
+        const r = applyDeleted(remote);
+        state.stocks = mergeArr(state.stocks, r.stocks);
+        state.trades = mergeArr(state.trades, r.trades);
+        state.deleted = Array.from(new Set([...(state.deleted || []), ...(r.deleted || [])]));
+        applyDeleted(state);
+        saveState({skipPush: true});
+      }
+      await gistPushState();
+      sync.lastSeen = Date.now();
+      saveSyncCfg();
+      setDot("on", "已同步 · " + nowTime());
+    } catch (e) {
+      setDot("fail", syncErrMsg(e));
+    } finally {
+      suppressPush = false;
+    }
+  }
+  async function pullSync() {
+    if (!sync.enabled || !sync.token || !sync.room) return;
+    suppressPush = true;
+    setDot("busy", "同步中…");
+    try {
+      const remote = await gistFetchState();
+      if (remote) {
+        const r = applyDeleted(remote);
+        state.stocks = mergeArr(state.stocks, r.stocks);
+        state.trades = mergeArr(state.trades, r.trades);
+        state.deleted = Array.from(new Set([...(state.deleted || []), ...(r.deleted || [])]));
+        applyDeleted(state);
+        sync.lastSeen = Date.now();
+        saveSyncCfg();
+        saveState({skipPush: true});
+        setDot("on", "已同步 · " + nowTime());   // 网络同步成功即刻转正，渲染异常不回退状态
+        try { await rebuildAndRender(); } catch (re) { console.error("分红日历渲染失败（数据已同步）", re); }
+      } else {
+        setDot("on", "已同步 · " + nowTime());
+      }
+    } catch (e) {
+      setDot("fail", syncErrMsg(e));
+    } finally {
+      suppressPush = false;
+    }
+  }
+  function startSyncPolling() { stopSyncPolling(); sync.timer = setInterval(pullSync, 15000); }
+  function stopSyncPolling() { if (sync.timer) { clearInterval(sync.timer); sync.timer = null; } }
+  function openMask(id) { document.getElementById(id).classList.add("open"); }
+  function closeMask(id) { document.getElementById(id).classList.remove("open"); }
+  let viewY, viewM; // 当前查看的年/月(0-11)
+  let eventsByDate = {}; // "YYYY-MM-DD" -> [event]
+  let allEvents = [];
+  let recsByCode = {};   // code -> 归一化分红记录数组（股票/ETF 统一）
+  let fundCache = {};    // ETF 分红缓存（按代码）
+  let fundDividendsJson = null; // 基金分红快照（同域 fund_dividends.json，含登记/除息/发放日）
+  let stockDividendsJson = null; // 股票分红快照（同域 stock_dividends.json，规避浏览器直连东方财富失败）
+
+  function perShareOf(rec) {
+    if (rec.PRETAX_BONUS_RMB != null && !isNaN(rec.PRETAX_BONUS_RMB)) return rec.PRETAX_BONUS_RMB / 10;
+    return null;
+  }
+  function dateOnly(s) { return s ? String(s).slice(0, 10) : null; }
+
+  // 判断是否为基金（ETF/LOF/场外基金）——与 index.html 口径一致
+  function isFundStock(st) {
+    if (st.fundType === "场内基金" || st.fundType === "场外基金") return true;
+    if (/^(ETF|LOF|基金)$/.test(st.sector || "")) return true;
+    const c = st.code || "";
+    return /^5|^1/.test(c); // 5xxxxx=沪市ETF/LOF，1xxxxx=可转债/基金等
+  }
+
+  // 把归一化记录展开成多个事件（预案/股权登记/除权除息/分红发放）
+  function recordsToEvents(stock, records) {
+    const out = [];
+    (records || []).forEach(rec => {
+      if (rec.planDate)  out.push({ date: rec.planDate,  type: "plan",   stock, rec, ps: rec.ps });
+      if (rec.recordDate)out.push({ date: rec.recordDate,type: "record", stock, rec, ps: rec.ps });
+      if (rec.exDate)    out.push({ date: rec.exDate,    type: "ex",     stock, rec, ps: rec.ps });
+      if (rec.payDate)   out.push({ date: rec.payDate,   type: "pay",    stock, rec, ps: rec.ps });
+    });
+    return out;
+  }
+
+  // 最近一次有除权除息的记录
+  function latestEx(recs) {
+    const withEx = (recs || []).filter(r => r.exDate).sort((a, b) => b.exDate.localeCompare(a.exDate));
+    return withEx.length ? withEx[0] : null;
+  }
+  // 最近一期每股红利
+  function latestPS(recs) {
+    const li = latestEx(recs);
+    return li ? (li.ps || 0) : 0;
+  }
+  // 最近一个完整财年的每股红利合计（按除权日年份分组，取最新年份之和）
+  function annualPerShare(recs) {
+    if (!recs || !recs.length) return 0;
+    const byYear = {};
+    recs.forEach(r => {
+      const dy = (r.exDate || r.reportDate || "").slice(0, 4);
+      if (dy) byYear[dy] = (byYear[dy] || 0) + (r.ps || 0);
+    });
+    const years = Object.keys(byYear).sort();
+    if (years.length) return byYear[years[years.length - 1]];
+    const withPs = recs.filter(r => r.ps).sort((a, b) => (b.exDate || "").localeCompare(a.exDate || ""));
+    return withPs.length ? withPs[0].ps : 0;
+  }
+
+  // JSONP：彻底绕过 CORS，东方财富 datacenter-web 接口支持 callback= 参数
+  function fetchJsonp(url, timeoutMs = 12000) {
+    return new Promise((resolve, reject) => {
+      const cb = "mmbf_cb_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+      const sep = url.includes("?") ? "&" : "?";
+      const sc = document.createElement("script");
+      let done = false;
+      const finish = (data, ok) => {
+        if (done) return; done = true;
+        try { sc.remove(); } catch (e) {}
+        try { delete window[cb]; } catch (e) {}
+        if (ok) resolve(data); else reject(new Error("jsonp_fail"));
+      };
+      window[cb] = (j) => finish((j && j.result && j.result.data) || [], true);
+      sc.onerror = () => finish(null, false);
+      sc.src = url + sep + "callback=" + cb;
+      document.head.appendChild(sc);
+      setTimeout(() => finish(null, false), timeoutMs);
+    });
+  }
+
+  // 带超时的 fetch：避免网络挂起阻塞整页渲染
+  function fetchWithTimeout(url, ms = 10000) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
+    return fetch(url, { cache: "no-store", signal: ctl.signal }).finally(() => clearTimeout(timer));
+  }
+
+  async function fetchDividends(code, force) {
+    const hit = cache.byCode[code];
+    // 命中缓存且未过期：每支股票独立计时，避免被其他股票的访问"续命"全局时间戳
+    // （旧缓存为纯数组格式，hit.ts 不存在 → 视为未命中，重新拉取）
+    // force=true（用户点刷新）时跳过命中判断强制重拉，保证拿到最新公告
+    if (!force && hit && typeof hit === "object" && hit.ts && (Date.now() - hit.ts) < CACHE_TTL) return hit.data;
+    const url = API.replace("{CODE}", code);
+    let data = null;
+    // fetch 优先：东方财富对带 Origin 的请求返回 Access-Control-Allow-Origin: *，CORS 放行
+    try {
+      const r = await fetchWithTimeout(url, 10000);
+      if (r.ok) { const j = await r.json(); data = (j && j.result && j.result.data) || []; }
+    } catch (e) { data = null; }
+    // JSONP 兜底（Chrome ORB 可能拦截 text/plain 跨域脚本，仅作 fallback）
+    if (data == null || (Array.isArray(data) && !data.length)) {
+      try { const jp = await fetchJsonp(url); if (jp && jp.length) data = jp; } catch (e) { /* 忽略 */ }
+    }
+    if (data == null || (Array.isArray(data) && !data.length)) {
+      // 两次取数均失败：回退旧缓存（含已过期），避免数据闪没；无缓存才返回空
+      if (hit && (hit.data || (Array.isArray(hit) && hit.length))) return (hit.data || hit);
+      return [];
+    }
+    cache.byCode[code] = { ts: Date.now(), data };
+    saveCache(cache);
+    return data;
+  }
+
+  // ETF/LOF/基金 分红：天天基金历史净值 JSONP（免 CORS），从 unitMoney 提取「每份派现金X元」及对应日期
+  function fetchFundDividends(code) {
+    return new Promise((resolve) => {
+      if (fundCache[code]) return resolve(fundCache[code]);
+      const sc = document.createElement("script");
+      let settled = false;
+      const finish = (res) => { if (settled) return; settled = true; sc.remove(); resolve(res); };
+      sc.onerror = () => finish([]);
+      sc.onload = function () {
+        try {
+          const arr = window.Data_netWorthTrend;
+          if (!Array.isArray(arr)) return finish([]);
+          const out = [];
+          for (const it of arr) {
+            if (it.unitMoney) {
+              const m = /每份派现金([\d.]+)元/.exec(it.unitMoney);
+              if (m && it.x) {
+                const d = new Date(it.x);
+                const ds = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+                out.push({ date: ds, perUnit: parseFloat(m[1]) });
+              }
+            }
+          }
+          fundCache[code] = out;
+          finish(out);
+        } catch (e) { finish([]); }
+      };
+      sc.src = "https://fund.eastmoney.com/pingzhongdata/" + encodeURIComponent(code) + ".js";
+      document.head.appendChild(sc);
+    });
+  }
+
+  // 股票：优先用同域 stock_dividends.json 快照，缺失时回退实时 JSONP/fetch
+  async function getStockRecords(st, force) {
+    const code = (st.code || "").replace(/[^0-9]/g, "").slice(-6) || st.code; // 兼容 "600690.SH"/"SH600690" 等写法
+    const f = stockDividendsJson && stockDividendsJson.stocks && stockDividendsJson.stocks[code];
+    if (f && f.records && f.records.length) {
+      return f.records.map(d => ({
+        ps: d.ps != null ? d.ps : null,
+        planText: d.planText || "",
+        planDate: null,
+        recordDate: d.recordDate || null,
+        exDate: d.exDate || null,
+        progress: "分红",
+        reportDate: null,
+        divYield: null
+      }));
+    }
+    const recs = await fetchDividends(code, force);
+    return recs.map(rec => ({
+      ps: perShareOf(rec),
+      planText: rec.IMPL_PLAN_PROFILE || "",
+      planDate: dateOnly(rec.PLAN_NOTICE_DATE),
+      recordDate: dateOnly(rec.EQUITY_RECORD_DATE),
+      exDate: dateOnly(rec.EX_DIVIDEND_DATE),
+      progress: rec.ASSIGN_PROGRESS || "",
+      reportDate: dateOnly(rec.REPORT_DATE),
+      divYield: rec.DIVIDENT_RATIO ? rec.DIVIDENT_RATIO * 100 : null
+    }));
+  }
+  // 加载分红快照：ETF 用同域 fund_dividends.json；股票用 stock_dividends.json（同域优先），
+  // 缺失或更新的股票再从 GitHub raw 拉 Actions 每日刷新的最新版，保证页面自动新鲜、无需重部署。
+  async function loadFundJson() {
+    try {
+      const r = await fetch("fund_dividends.json", { cache: "no-store" });
+      if (r.ok) fundDividendsJson = await r.json();
+    } catch (e) { fundDividendsJson = null; }
+
+    // 股票快照：先同域，再用 GitHub raw（Actions 每日更新）覆盖合并
+    let merged = { updatedAt: "", source: "eastmoney snapshot", stocks: {} };
+    try {
+      const r2 = await fetch("stock_dividends.json", { cache: "no-store" });
+      if (r2.ok) {
+        const base = await r2.json();
+        merged = { updatedAt: base.updatedAt || "", source: base.source || merged.source, stocks: Object.assign({}, base.stocks || {}) };
+      }
+    } catch (e) { /* 同域缺失则用后面的 raw */ }
+    try {
+      const rawUrl = "https://raw.githubusercontent.com/fengyin01/stock-ledger/master/stock_dividends.json";
+      const rr = await fetchWithTimeout(rawUrl, 8000);
+      if (rr.ok) {
+        const raw = await rr.json();
+        if (raw && raw.stocks) {
+          // 用 updatedAt（YYYY-MM-DD，字典序=时间序）决定 raw 是否真比 base 新
+          // 修复：raw 不一定比 base 新，旧 raw 不能再无脑覆盖 base（会抹掉 base 里的最新记录）
+          const baseTs = merged.updatedAt || "";
+          const rawTs = raw.updatedAt || "";
+          if (rawTs > baseTs) {
+            // raw 整体更新：覆盖 base
+            for (const code in raw.stocks) merged.stocks[code] = raw.stocks[code];
+            merged.updatedAt = rawTs;
+            merged.source = (merged.source || "") + " +github-raw(fresher)";
+          } else {
+            // raw 不比 base 新：仅补全 base 缺失的 code，绝不覆盖 base 已有记录
+            // 这样即使 base 是用户本地手工更新、raw 还没同步，也不会被回滚
+            let added = 0;
+            for (const code in raw.stocks) {
+              if (!merged.stocks[code]) { merged.stocks[code] = raw.stocks[code]; added++; }
+            }
+            if (added > 0) merged.source = (merged.source || "") + " +github-raw(supplemental)";
+          }
+        }
+      }
+    } catch (e) { /* raw 不可达时静默回退同域快照，不影响基本显示 */ }
+    stockDividendsJson = merged;
+  }
+
+  // ETF/LOF/基金：优先用同域快照（含股权登记日、除息日、分红发放日），缺失时回退天天基金净值走势（仅除息日）
+  async function getFundRecords(st) {
+    const f = fundDividendsJson && fundDividendsJson.funds && fundDividendsJson.funds[st.code];
+    if (f && f.records && f.records.length) {
+      return f.records.map(d => ({
+        ps: d.perUnit != null ? d.perUnit : null,
+        planText: d.per10 != null ? `每10份派现金${d.per10}元` : "",
+        planDate: null,
+        recordDate: d.recordDate || null,
+        exDate: d.exDate || null,
+        payDate: d.payDate || null,
+        progress: "基金分红",
+        reportDate: d.exDate || null,
+        divYield: null
+      }));
+    }
+    // 回退：天天基金净值走势（unitMoney 仅含除息日，无登记日/发放日）
+    const divs = await fetchFundDividends(st.code);
+    return divs.map(d => ({
+      ps: d.perUnit,
+      planText: "",
+      planDate: null, recordDate: null,
+      exDate: d.date,
+      payDate: null,
+      progress: "基金分红",
+      reportDate: d.date,
+      divYield: null
+    }));
+  }
+
+  async function build(force) {
+    document.getElementById("btnRefresh").textContent = "⏳ 拉取中…";
+    await loadFundJson();
+    const evs = [];
+    recsByCode = {};
+    for (const st of state.stocks) {
+      if (!st.code) continue;
+      // 股票走东方财富；ETF/LOF/基金走天天基金（重新确认当前持仓的真实分红）
+      const recs = isFundStock(st) ? await getFundRecords(st) : await getStockRecords(st, force);
+      recsByCode[st.code] = recs;
+      evs.push(...recordsToEvents(st, recs));
+    }
+    allEvents = evs;
+    eventsByDate = {};
+    evs.forEach(e => { (eventsByDate[e.date] = eventsByDate[e.date] || []).push(e); });
+    renderStats();
+    renderCalendar();
+    renderUpcoming();
+    renderStocks();
+    renderDivDates();
+    document.getElementById("btnRefresh").textContent = "🔄 刷新分红";
+    toast("分红数据已更新");
+  }
+
+  function fmtMoney(n) {
+    if (n == null) return "—";
+    return "¥" + (Math.round(n * 100) / 100).toLocaleString("zh-CN");
+  }
+  // 交易引擎：按 code 汇总买入/卖出，计算当前持仓数量与平均成本
+  function computeHoldings() {
+    const map = {};
+    const ordered = (state.trades || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    for (const t of ordered) {
+      const c = t.code; if (!c) continue;
+      if (!map[c]) map[c] = { qty: 0, avgCost: 0, name: t.name };
+      const h = map[c];
+      const amount = (t.price || 0) * (t.qty || 0);
+      if (t.type === "buy") {
+        const total = amount + (t.fee || 0);
+        const nq = h.qty + t.qty;
+        h.avgCost = nq > 0 ? (h.qty * h.avgCost + total) / nq : 0;
+        h.qty = nq;
+      } else {
+        const proceeds = amount - (t.fee || 0);
+        const cb = h.avgCost * t.qty;
+        h.qty = Math.max(0, h.qty - t.qty);
+        if (h.qty === 0) h.avgCost = 0;
+      }
+    }
+    return map;
+  }
+
+  // 与 index.html 保持一致：若用户手动填写了 s.shares 则优先使用，否则按交易记录计算
+  function effectiveStock(s) {
+    const map = computeHoldings();
+    const h = map[s.code] || { qty: 0, avgCost: 0 };
+    const shares = s.shares != null && s.shares !== "" ? Number(s.shares) : h.qty;
+    return { shares, cost: h.avgCost || 0 };
+  }
+  function sharesOf(st) { return effectiveStock(st).shares; }
+
+  function renderStats() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const horizon = new Date(today.getTime() + 90 * 86400000);
+    let annual = 0, pending90 = 0, exCount = 0;
+    state.stocks.forEach(st => {
+      const recs = recsByCode[st.code] || [];
+      annual += annualPerShare(recs) * sharesOf(st);
+    });
+    // 待收 & 除权计数（基于已展开事件）
+    allEvents.forEach(e => {
+      if (e.type !== "ex" || !e.ps) return;
+      const d = new Date(e.date);
+      if (d >= today && d <= horizon) { pending90 += e.ps * sharesOf(e.stock); exCount++; }
+    });
+    const el = document.getElementById("stats");
+    el.innerHTML = `
+      <div class="stat accent"><div class="label">预计年红利（税前）</div><div class="value">${fmtMoney(annual)}</div></div>
+      <div class="stat"><div class="label">未来90天待收</div><div class="value">${fmtMoney(pending90)}</div></div>
+      <div class="stat"><div class="label">90天内除权</div><div class="value">${exCount}<small> 次</small></div></div>
+      <div class="stat"><div class="label">关注股票</div><div class="value">${state.stocks.length}<small> 只</small></div></div>
+    `;
+  }
+
+  function renderCalendar() {
+    const weekHead = document.getElementById("weekHead");
+    weekHead.innerHTML = ["一","二","三","四","五","六","日"].map(w => `<div class="wd">${w}</div>`).join("");
+    document.getElementById("monthLabel").textContent = viewY + "年" + (viewM + 1) + "月";
+    const first = new Date(viewY, viewM, 1);
+    const startOffset = (first.getDay() + 6) % 7; // 周一为起点
+    const daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const grid = document.getElementById("calGrid");
+    grid.innerHTML = cells.map(c => {
+      if (c === null) return `<div class="cell other"></div>`;
+      const dObj = new Date(viewY, viewM, c); dObj.setHours(0,0,0,0);
+      const ds = viewY + "-" + String(viewM + 1).padStart(2, "0") + "-" + String(c).padStart(2, "0");
+      const evs = eventsByDate[ds] || [];
+      const isOther = dObj.getMonth() !== viewM;
+      const isToday = dObj.getTime() === today.getTime();
+      const isMobile = window.innerWidth <= 480;
+      const chipLimit = isMobile ? 3 : 2;
+      const chips = evs.slice(0, chipLimit).map(e => {
+        const txt = isMobile ? typeName(e.type) : `${e.stock.name}·${typeName(e.type)}`;
+        return `<div class="chip ${e.type}" title="${e.stock.name} ${typeName(e.type)}">${txt}</div>`;
+      }).join("");
+      const more = evs.length > chipLimit ? `<div class="more">+${evs.length - chipLimit}</div>` : "";
+      return `<div class="cell ${isOther ? "other" : ""} ${isToday ? "today" : ""}" onclick="openDay('${ds}')">
+        <div class="dnum">${c}</div>${chips}${more}
+      </div>`;
+    }).join("");
+  }
+  function typeName(t) { return t === "plan" ? "预案" : t === "record" ? "登记" : t === "ex" ? "除息" : "发放"; }
+
+  function renderUpcoming() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const horizon = new Date(today.getTime() + 90 * 86400000);
+    const list = allEvents.filter(e => (e.type === "ex" || e.type === "pay") && e.ps)
+      .map(e => ({ ...e, d: new Date(e.date) }))
+      .filter(e => e.d >= today && e.d <= horizon)
+      .sort((a, b) => a.d - b.d);
+    const box = document.getElementById("upcoming");
+    if (!list.length) { box.innerHTML = `<div class="empty">未来 90 天暂无分红事件</div>`; return; }
+    box.innerHTML = list.map(e => {
+      const shares = sharesOf(e.stock);
+      const amt = e.ps * shares;
+      const unit = isFundStock(e.stock) ? "份" : "股";
+      const dd = e.date.slice(5).replace("-", "/");
+      const wd = "周" + "日一二三四五六"[e.d.getDay()];
+      return `<div class="item">
+        <div class="date"><div class="d1">${dd}</div><div class="d2">${wd}</div></div>
+        <span class="tag ${e.type}">${typeName(e.type)}</span>
+        <div class="body"><div class="t1">${e.stock.name} <span style="color:var(--text-3);font-weight:400">${e.stock.code}</span></div>
+          <div class="t2">${e.rec.planText || e.rec.IMPL_PLAN_PROFILE || ""} · 持仓 ${shares} ${unit}</div></div>
+        <div class="amt">${fmtMoney(amt)}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderStocks() {
+    const grid = document.getElementById("stockGrid");
+    if (!state.stocks.length) {
+      grid.innerHTML = `<div class="empty">还没有持仓，去<a href="index.html">记账主页</a>添加股票吧</div>`;
+      return;
+    }
+    grid.innerHTML = state.stocks.map(st => {
+      const recs = recsByCode[st.code] || [];
+      const li = latestEx(recs);
+      const fund = isFundStock(st);
+      if (!li) return `<div class="stock-card"><div class="nm">${st.name} <span class="cd">${st.code}</span></div><div class="t2" style="color:var(--text-3);margin-top:8px">暂无分红数据</div></div>`;
+      const ps = li.ps;
+      const yld = st.price && ps ? ps / st.price * 100 : (li.divYield != null ? li.divYield : null);
+      const done = li.progress === "实施分配" || li.progress === "实施" || li.progress === "基金分红";
+      const tag = fund ? `<span class="prog">ETF</span>` : "";
+      return `<div class="stock-card">
+        <div class="nm">${st.name} <span class="cd">${st.code}</span>${tag}</div>
+        <div class="plan">${li.planText || (fund ? "基金分红" : "—")}</div>
+        <div class="meta">
+          <div>每股红利：<b>${ps != null ? "¥" + ps.toFixed(4) : "—"}</b></div>
+          <div>股息率：<b>${yld != null ? yld.toFixed(2) + "%" : "—"}</b></div>
+          <div>股权登记：<b>${li.recordDate || "—"}</b></div>
+          <div>除权除息：<b>${li.exDate || "—"}</b></div>
+          <div>分红发放：<b>${li.payDate || "—"}</b></div>
+          <div>每份分红：<b>${li.planText || "—"}</b></div>
+        </div>
+        <span class="prog ${done ? "done" : ""}">${li.progress || "—"}</span>
+      </div>`;
+    }).join("");
+  }
+
+  // 预计分红日：每只持仓一行，显示股权登记日 / 除权除息日（股票与 ETF 一致）
+  // 优先展示未来（下次）记录，无未来记录则回退最近一次已发生的记录
+  function renderDivDates() {
+    const box = document.getElementById("divDates");
+    if (!state.stocks.length) {
+      box.innerHTML = `<div class="empty">还没有持仓，去<a href="index.html">记账主页</a>添加股票吧</div>`;
+      return;
+    }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const rows = state.stocks.map(st => {
+      const recs = recsByCode[st.code] || [];
+      const withEx = recs.filter(r => r.exDate).sort((a, b) => a.exDate.localeCompare(b.exDate));
+      const future = withEx.filter(r => new Date(r.exDate) >= today);
+      const pick = future.length ? future[0] : (withEx.length ? withEx[withEx.length - 1] : null);
+      const kind = future.length ? "next" : "last";
+      const rd = pick && pick.recordDate ? pick.recordDate : "—";
+      const ex = pick && pick.exDate ? pick.exDate : "—";
+      const tag = pick ? (kind === "next" ? "下次" : "最近") : "暂无分红";
+      const tagCls = pick ? kind : "last";
+      const fund = isFundStock(st) ? ` <span class="prog">ETF</span>` : "";
+      return `<div class="div-row">
+        <div class="nm">${st.name}<span class="cd">${st.code}</span>${fund}</div>
+        <div class="cols"><div>股权登记：<b>${rd}</b></div><div>除权除息：<b>${ex}</b></div></div>
+        <span class="k ${tagCls}">${tag}</span>
+      </div>`;
+    }).join("");
+    box.innerHTML = rows;
+  }
+
+  window.openDay = function (ds) {
+    const evs = eventsByDate[ds] || [];
+    document.getElementById("dayTitle").textContent = ds + " 分红事件（" + evs.length + "）";
+    const body = document.getElementById("dayBody");
+    if (!evs.length) { body.innerHTML = `<div class="empty">当天无事件</div>`; }
+    else {
+      body.innerHTML = evs.map(e => {
+        const shares = sharesOf(e.stock);
+        const amt = e.ps ? e.ps * shares : null;
+        const unit = isFundStock(e.stock) ? "份" : "股";
+        return `<div class="day-ev">
+          <div class="h"><span class="tag ${e.type}">${typeName(e.type)}</span> ${e.stock.name} <span style="color:var(--text-3);font-weight:400">${e.stock.code}</span></div>
+          <div class="r">方案：${e.rec.planText || e.rec.IMPL_PLAN_PROFILE || "—"}<br>
+          进度：${e.rec.progress || e.rec.ASSIGN_PROGRESS || "—"}<br>
+          每股红利：${e.ps != null ? "¥" + e.ps.toFixed(3) : "—"}　持仓：${shares} ${unit}${amt != null ? "　预计：" + fmtMoney(amt) : ""}
+          ${e.rec.REPORT_DATE ? "<br>报告期：" + dateOnly(e.rec.REPORT_DATE) : ""}</div>
+        </div>`;
+      }).join("");
+    }
+    document.getElementById("dayMask").classList.add("show");
+  };
+
+  // 导航
+  document.getElementById("prevM").onclick = () => { viewM--; if (viewM < 0) { viewM = 11; viewY--; } renderCalendar(); };
+  document.getElementById("nextM").onclick = () => { viewM++; if (viewM > 11) { viewM = 0; viewY++; } renderCalendar(); };
+  document.getElementById("toToday").onclick = () => { const n = new Date(); viewY = n.getFullYear(); viewM = n.getMonth(); renderCalendar(); };
+  // 刷新：强制重拉实时接口拿最新公告；不清空 localStorage 缓存，
+  // 这样即使实时接口瞬时失败，也能回退到上一次成功拉取的数据，避免分红事件闪没
+  document.getElementById("btnRefresh").onclick = () => { fundCache = {}; build(true); };
+
+  // 同步按钮事件
+  document.getElementById("btnSync").addEventListener("click", () => {
+    document.getElementById("syncToken").value = sync.token || "";
+    document.getElementById("syncRoom").value = sync.room || "";
+    document.getElementById("syncDevice").value = sync.device || "";
+    document.getElementById("syncStatus").textContent = sync.enabled
+      ? "同步已开启 · 每 15 秒自动拉取"
+      : "未开启同步 · 数据仅保存在本机浏览器";
+    openMask("syncMask");
+  });
+  document.addEventListener("click", e => {
+    const close = e.target.closest("[data-close]");
+    if (close) { closeMask(close.dataset.close); return; }
+    if (e.target.classList.contains("sync-mask")) closeMask(e.target.id);
+  });
+  document.getElementById("syncEnable").addEventListener("click", async () => {
+    const token = document.getElementById("syncToken").value.trim();
+    const enteredRoom = document.getElementById("syncRoom").value.trim();
+    const device = document.getElementById("syncDevice").value.trim() || "本机";
+    if (!token) { toast("请填写 GitHub 令牌"); return; }
+    sync.enabled = true; sync.token = token; sync.device = device;
+    let created = false;
+    if (!enteredRoom) {
+      try {
+        setDot("busy", "正在创建同步仓库…");
+        const id = await gistCreate();
+        sync.room = id; created = true;
+      } catch (e) {
+        sync.enabled = false; setDot("fail", "同步失败：GitHub 不可达或令牌无 gist 权限"); toast("创建失败：GitHub 不可达或令牌无 gist 权限"); return;
+      }
+    } else {
+      sync.room = enteredRoom;
+    }
+    saveSyncCfg();
+    document.getElementById("syncRoom").value = sync.room;
+    closeMask("syncMask");
+    toast(created ? ("已生成同步码：" + sync.room) : "正在同步…");
+    pullSync().then(startSyncPolling);
+  });
+  document.getElementById("syncDisable").addEventListener("click", () => {
+    sync.enabled = false; saveSyncCfg(); stopSyncPolling(); setDot("", "未同步");
+    closeMask("syncMask"); toast("已关闭同步");
+  });
+  loadSyncCfg();
+  if (sync.enabled && sync.token && sync.room) {
+    setDot("busy", "同步中…");
+    pullSync().then(startSyncPolling);
+  }
+
+  // 初始化：默认显示今天所在月份
+  const now = new Date();
+  viewY = now.getFullYear(); viewM = now.getMonth();
+  build();
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && sync.enabled && sync.token && sync.room) pullSync(); });
+  window.addEventListener("online", () => { if (sync.enabled && sync.token && sync.room) pullSync(); });
+</script>
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" class="icon-fill"><circle cx="12" cy="12" r="6"/></svg>
+    <span>持仓</span>
+  </a>
+  <a href="watchlist.html">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>自选</span>
+  </a>
+  <a href="returns.html">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>收益</span>
+  </a>
+  <a href="sectors.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>板块</span>
+  </a>
+  <a href="news.html">
+    <svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/></svg>
+    <span>新闻</span>
+  </a>
+  <a href="calendar.html" class="active">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>日历</span>
+  </a>
+</nav>
+</body>
+</html>

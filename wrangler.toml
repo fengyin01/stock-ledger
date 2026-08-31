@@ -1,0 +1,9 @@
+name = "stock-ledger-sync"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# D1 数据库绑定：在 Cloudflare 创建 D1 后，把 database_id 填到下面
+[[d1_databases]]
+binding = "DB"
+database_name = "stock-ledger-db"
+database_id = "REPLACE_WITH_YOUR_D1_ID"

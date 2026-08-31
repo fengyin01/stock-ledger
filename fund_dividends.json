@@ -1,0 +1,281 @@
+{
+  "updatedAt": "2026-08-08",
+  "source": "eastmoney fundf10 fhsp",
+  "funds": {
+    "563020": {
+      "name": "红利低波ETF易方达",
+      "records": [
+        {
+          "year": "2026",
+          "recordDate": "2026-06-09",
+          "exDate": "2026-06-10",
+          "payDate": "2026-06-15",
+          "per10": 0.12,
+          "perUnit": 0.012
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-03-10",
+          "exDate": "2026-03-11",
+          "payDate": "2026-03-16",
+          "per10": 0.12,
+          "perUnit": 0.012
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-12-09",
+          "exDate": "2025-12-10",
+          "payDate": "2025-12-15",
+          "per10": 0.12,
+          "perUnit": 0.012
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-09-09",
+          "exDate": "2025-09-10",
+          "payDate": "2025-09-15",
+          "per10": 0.12,
+          "perUnit": 0.012
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-06-11",
+          "exDate": "2025-06-12",
+          "payDate": "2025-06-17",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-03-11",
+          "exDate": "2025-03-12",
+          "payDate": "2025-03-17",
+          "per10": 0.09,
+          "perUnit": 0.009
+        },
+        {
+          "year": "2024",
+          "recordDate": "2024-12-10",
+          "exDate": "2024-12-11",
+          "payDate": "2024-12-16",
+          "per10": 0.14,
+          "perUnit": 0.014000000000000002
+        },
+        {
+          "year": "2024",
+          "recordDate": "2024-09-11",
+          "exDate": "2024-09-12",
+          "payDate": "2024-09-19",
+          "per10": 0.16,
+          "perUnit": 0.016
+        },
+        {
+          "year": "2024",
+          "recordDate": "2024-06-14",
+          "exDate": "2024-06-17",
+          "payDate": "2024-06-20",
+          "per10": 0.12,
+          "perUnit": 0.012
+        }
+      ]
+    },
+    "513630": {
+      "name": "港股低波红利ETF摩根",
+      "records": [
+        {
+          "year": "2026",
+          "recordDate": "2026-07-23",
+          "exDate": "2026-07-24",
+          "payDate": "2026-07-31",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-06-22",
+          "exDate": "2026-06-23",
+          "payDate": "2026-06-30",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-05-20",
+          "exDate": "2026-05-21",
+          "payDate": "2026-05-29",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-04-24",
+          "exDate": "2026-04-27",
+          "payDate": "2026-04-30",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-03-25",
+          "exDate": "2026-03-26",
+          "payDate": "2026-03-31",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-02-13",
+          "exDate": "2026-02-24",
+          "payDate": "2026-02-27",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-01-26",
+          "exDate": "2026-01-27",
+          "payDate": "2026-01-30",
+          "per10": 0.02,
+          "perUnit": 0.002
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-12-29",
+          "exDate": "2025-12-30",
+          "payDate": "2026-01-06",
+          "per10": 0.02,
+          "perUnit": 0.002
+        }
+      ]
+    },
+    "512890": {
+      "name": "红利低波ETF华泰柏瑞",
+      "records": []
+    },
+    "513530": {
+      "name": "港股通红利ETF华泰柏瑞",
+      "records": [
+        {
+          "year": "2026",
+          "recordDate": "2026-08-14",
+          "exDate": "2026-08-17",
+          "payDate": "2026-08-24",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-07-17",
+          "exDate": "2026-07-20",
+          "payDate": "2026-07-27",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-06-12",
+          "exDate": "2026-06-15",
+          "payDate": "2026-06-23",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-05-15",
+          "exDate": "2026-05-18",
+          "payDate": "2026-05-25",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-04-17",
+          "exDate": "2026-04-20",
+          "payDate": "2026-04-27",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-03-20",
+          "exDate": "2026-03-23",
+          "payDate": "2026-03-30",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-02-25",
+          "exDate": "2026-02-26",
+          "payDate": "2026-03-05",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-01-20",
+          "exDate": "2026-01-21",
+          "payDate": "2026-01-28",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-12-12",
+          "exDate": "2025-12-15",
+          "payDate": "2025-12-22",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-11-14",
+          "exDate": "2025-11-17",
+          "payDate": "2025-11-24",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-10-17",
+          "exDate": "2025-10-20",
+          "payDate": "2025-10-27",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-09-12",
+          "exDate": "2025-09-15",
+          "payDate": "2025-09-22",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-08-15",
+          "exDate": "2025-08-18",
+          "payDate": "2025-08-25",
+          "per10": 0.1,
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-07-11",
+          "exDate": "2025-07-14",
+          "payDate": "2025-07-21",
+          "per10": 0.2,
+          "perUnit": 0.02
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-06-13",
+          "exDate": "2025-06-16",
+          "payDate": "2025-06-19",
+          "per10": 0.2,
+          "perUnit": 0.02
+        }
+      ]
+    }
+  }
+}
