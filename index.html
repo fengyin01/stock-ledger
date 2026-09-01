@@ -429,7 +429,28 @@
     }
   }
 </style>
-</head>
+<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
+<script>
+(function(){
+  try{
+    var beacon=new BeaconAction({
+      appkey:'0WEB06U85YBSLJNL',
+      versionCode:'1.0.0',
+      channelID:'share',
+      delay:1000,
+      sessionDuration:30*60*1000,
+      isOversea:false,
+      needReportRqdEvent:false
+    });
+    beacon.onDirectUserAction('preview_page_view',{
+      'url':location.href,
+      'referrer':document.referrer,
+      'title':document.title,
+      'sandbox_id':'7d11894bad224f24a3b7f8d2c921d2b8'
+    });
+  }catch(e){}
+})();
+</script></head>
 <body>
 
 <div class="topbar">
@@ -442,7 +463,7 @@
       <button class="link-like" id="navWatch">自选</button>
       <button class="link-like" id="navTrade">交易记录</button>
       <button class="link-like" id="btnRefresh">🔄 刷新行情</button>
-      <button class="link-like" id="btnSync">🔗 同步</button><span class="sync-dot" id="syncDot" title="未同步"></span>
+      <button class="link-like" id="btnSync"><span id="btnSyncLabel">🔗 同步</span></button><span class="sync-dot" id="syncDot" title="未同步"></span>
       <a class="link-like" href="calendar.html" style="text-decoration:none">📅 分红日历</a>
       <button class="link-like" id="btnExport">导出</button>
       <button class="link-like" id="btnImport">导入</button>
@@ -657,14 +678,19 @@
       <input id="syncToken" type="password" placeholder="粘贴你的 GitHub Personal Access Token" autocomplete="off" />
     </div>
     <div class="field">
-      <label>同步码（留空=新建一份账本；填入另一台设备的同步码=加入同一份账本）</label>
-      <input id="syncRoom" placeholder="留空自动生成，或粘贴另一台设备的同步码" />
+      <label>同步码（两台设备必须完全一致才能互相同步；留空=新建账本）</label>
+      <input id="syncRoom" placeholder="留空自动生成，或粘贴另一台设备的同步码（勿带 # 前缀）" />
     </div>
     <div class="field">
       <label>本机设备名（便于辨识）</label>
       <input id="syncDevice" placeholder="如：我的手机 / 办公室电脑" />
     </div>
-    <div class="sheet-foot">
+    <div class="hint" id="syncShareHint" style="font-size:11px;color:var(--text-3);margin:-4px 0 10px">
+      多端同步：两台设备的<strong>同步码必须完全一致</strong>，且都要填同一份 <code>GitHub 令牌</code>（PAT 仅 gist 权限即可）。提示：每台设备的浏览器独立保存自己的令牌，同步码与令牌没有任何关联。
+    </div>
+    <div class="sheet-foot" style="flex-wrap:wrap;gap:8px">
+      <button class="btn" id="syncCopyLink" type="button" style="display:none">📤 复制同步链接（发给另一台设备）</button>
+      <span style="flex:1"></span>
       <button class="btn danger" id="syncDisable">关闭同步</button>
       <button class="btn btn-primary" id="syncEnable">启用并同步</button>
     </div>
@@ -845,6 +871,8 @@
   function setDot(cls, title) {
     const d = $("#syncDot");
     if (d) { d.className = "sync-dot" + (cls ? " " + cls : ""); d.title = title || ""; }
+    // 同步状态变化时刷新顶部按钮的同步码短码
+    renderSyncBtn();
   }
   // 同步异常 -> 可读文案；失败时状态点用独立红色（.fail），与“进行中”（琥珀）区分
   function syncErrMsg(e) {
@@ -1747,14 +1775,41 @@
   $("#btnRefresh").onclick = refreshAllQuotes;
 
   // 同步
+  function renderSyncBtn() {
+    const lab = $("#btnSyncLabel");
+    if (!lab) return;
+    if (sync.enabled && sync.room) {
+      const short = sync.room.replace(/[^a-zA-Z0-9]/g, "").slice(-8) || sync.room.slice(-8);
+      lab.textContent = "🔗 同步·" + short;
+    } else {
+      lab.textContent = "🔗 同步";
+    }
+  }
   $("#btnSync").onclick = () => {
     $("#syncToken").value = sync.token || "";
     $("#syncRoom").value = sync.room || "";
     $("#syncDevice").value = sync.device || "";
+    const dl = sync.enabled && sync.room;
+    $("#syncCopyLink").style.display = dl ? "" : "none";
     $("#syncStatus").textContent = sync.enabled
       ? "同步已开启 · 每 15 秒自动拉取，本地修改即时推送"
       : "未开启同步 · 数据仅保存在本机浏览器";
     openMask("syncMask");
+  };
+  $("#syncCopyLink").onclick = async () => {
+    if (!sync.room) { toast("尚未生成同步码"); return; }
+    const url = location.origin + location.pathname + "#sync=" + encodeURIComponent(sync.room);
+    const ta = document.createElement("textarea");
+    ta.value = url; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try {
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast(ok ? "同步链接已复制 · 在另一台设备打开此链接即可加入同一份账本" : ("请手动复制：" + url));
+    } catch (e) {
+      document.body.removeChild(ta);
+      prompt("复制下面的链接，发给另一台设备打开：", url);
+    }
   };
   $("#syncEnable").onclick = async () => {
     const token = $("#syncToken").value.trim();
@@ -1776,12 +1831,17 @@
     }
     saveSyncCfg();
     $("#syncRoom").value = sync.room;
+    renderSyncBtn();
+    // 隐藏 URL 上的 #sync=...（避免下次刷新再次进入"加入别人账本"提示分支）
+    if (location.hash && /sync=/i.test(location.hash)) {
+      try { history.replaceState(null, "", location.pathname + location.search + (location.hash.replace(/sync=[^&]+/i, "").replace(/^#?&?$/, "") || "")); } catch (e) {}
+    }
     closeMask("syncMask");
     toast(created ? ("已生成同步码：" + sync.room + "（请抄到另一台设备）") : "正在同步…");
     pullSync().then(startSyncPolling);
   };
   $("#syncDisable").onclick = () => {
-    sync.enabled = false; saveSyncCfg(); stopSyncPolling(); setDot("", "未同步");
+    sync.enabled = false; saveSyncCfg(); stopSyncPolling(); setDot("", "未同步"); renderSyncBtn();
     closeMask("syncMask"); toast("已关闭同步");
   };
 
@@ -1819,12 +1879,51 @@
   loadSyncCfg();
   // 清掉旧版（workers.dev）遗留的无效同步配置：没有令牌则视为未启用
   if (sync.enabled && !sync.token) { sync.enabled = false; saveSyncCfg(); }
+  // URL hash 分享：另一台设备通过 #sync=ROOM 进入，自动预填同步码并提示用户填令牌
+  // 注意：token 不能放 URL（敏感），所以仅预填 room；用户仍需在弹窗里粘贴 PAT
+  (function consumeSyncHash() {
+    const m = (location.hash || "").match(/sync=([^&]+)/i);
+    if (!m) return;
+    const incomingRoom = decodeURIComponent(m[1]).trim();
+    if (!incomingRoom) return;
+    // 情况 A：当前已启用且 room 一致 → 直接双向同步一次（pull+push），确保两端数据收敛
+    if (sync.enabled && sync.room === incomingRoom) {
+      setDot("busy", "同步中…");
+      toast("已加入同一份账本，正在双向同步…");
+      pushSync().then(() => { if (sync.enabled) startSyncPolling(); });
+      return;
+    }
+    // 情况 B：未启用但本地已保存过这个 room（pre-fingerprint）→ 不自动开，等用户填 token
+    if (sync.room === incomingRoom && !sync.enabled) {
+      setTimeout(() => {
+        toast("检测到同步链接，请在弹窗里填写本机的 GitHub 令牌（PAT）后启用同步");
+        $("#btnSync").click();
+        setTimeout(() => { $("#syncToken").focus(); }, 60);
+      }, 200);
+      return;
+    }
+    // 情况 C：未配置 room 或 room 不同 → 预填 room 并提示
+    if (!sync.room) {
+      sync.room = incomingRoom;
+      saveSyncCfg();
+      renderSyncBtn();
+      setTimeout(() => {
+        toast("检测到同步链接，请在弹窗里填写本机的 GitHub 令牌（PAT）后启用同步");
+        $("#btnSync").click();
+        setTimeout(() => { $("#syncToken").focus(); }, 60);
+      }, 200);
+    } else if (sync.room !== incomingRoom) {
+      // 已在另一份账本里：不擅自切换，仅提示
+      setTimeout(() => { toast("链接里的同步码与本机不同（如要加入请到同步弹窗手动核对）"); }, 200);
+    }
+  })();
   if (sync.enabled) {
     setDot("busy", "同步中…");
     pullSync().then(() => { if (sync.enabled) startSyncPolling(); });
   } else {
     setDot("", "未同步");
   }
+  renderSyncBtn();
 
   updateMarketStatus();
   setInterval(updateMarketStatus, 60000);
