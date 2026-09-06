@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-05",
+  "updatedAt": "2026-09-06",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -10255,6 +10255,16 @@
     "600309": {
       "name": "万华化学",
       "records": [
+        {
+          "ps": 0.8099999999999999,
+          "planText": "10派8.10元(含税,扣税后7.29元)",
+          "planDate": "2026-07-23",
+          "recordDate": "2026-09-10",
+          "exDate": "2026-09-11",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 1.0430079835
+        },
         {
           "ps": 1.25,
           "planText": "10派12.50元(含税,扣税后11.25元)",
