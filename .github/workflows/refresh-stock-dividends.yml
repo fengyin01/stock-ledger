@@ -1,4 +1,4 @@
-name: 刷新股票分红快照
+name: 刷新分红快照（股票 + 基金）
 
 on:
   schedule:
@@ -19,19 +19,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 抓取分红快照（全量重抓，捕捉新公告）
+      - name: 抓取股票分红快照（全量重抓，捕捉新公告）
         env:
           GH_ACTIONS: '1'
         run: node fetch_my_stocks.js
+
+      - name: 抓取基金分红快照（ETF/LOF，含权益登记日/除息日/发放日）
+        run: node fetch_fund_dividends.js
 
       - name: 提交更新
         run: |
           git config user.name "dividend-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add stock_dividends.json
+          git add stock_dividends.json fund_dividends.json
           if git diff --cached --quiet; then
             echo "无变化，跳过提交"
           else
-            git commit -m "chore: 自动刷新股票分红快照 $(date +%F)"
+            git commit -m "chore: 自动刷新分红快照 $(date +%F)"
             git push
           fi

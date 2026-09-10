@@ -1018,10 +1018,29 @@
   async function loadExMap() {
     const norm = (recs, getEx, getPs) => (recs || []).map(r => ({ exDate: getEx(r), ps: getPs(r) })).filter(r => r.exDate);
     try {
-      const [sj, fj] = await Promise.all([
+      let [sj, fj] = await Promise.all([
         fetch("stock_dividends.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch("fund_dividends.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
+      // 基金快照补最新一期：同域快照只在部署时更新，用仓库 raw（Actions 每日刷新）按除息日去重补全
+      try {
+        const fr = await fetch("https://raw.githubusercontent.com/fengyin01/stock-ledger/master/fund_dividends.json", { cache: "no-store" }).catch(() => null);
+        if (fr && fr.ok) {
+          const rawF = await fr.json();
+          if (rawF && rawF.funds) {
+            if (!fj) fj = { funds: {} };
+            if (!fj.funds) fj.funds = {};
+            for (const code in rawF.funds) {
+              const rf = rawF.funds[code] || {};
+              const cur = fj.funds[code] || { name: rf.name || "", records: [] };
+              const seen = new Set((cur.records || []).map(x => x.exDate || ""));
+              const recs = (cur.records || []).slice();
+              (rf.records || []).forEach(x => { if (x && x.exDate && !seen.has(x.exDate)) { seen.add(x.exDate); recs.push(x); } });
+              fj.funds[code] = { name: cur.name || rf.name || "", records: recs };
+            }
+          }
+        }
+      } catch (e) { /* raw 不可达时用同域快照 */ }
       const m = {};
       if (sj && sj.stocks) for (const code in sj.stocks) {
         m[code] = norm(sj.stocks[code].records, r => r.exDate, r => Number(r.ps) || 0);

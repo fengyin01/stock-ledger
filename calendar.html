@@ -817,6 +817,38 @@
       if (r.ok) fundDividendsJson = await r.json();
     } catch (e) { fundDividendsJson = null; }
 
+    // 基金快照：同样用 GitHub raw（Actions 每日刷新）覆盖合并，避免部署时点写死的快照长期过期。
+    // 合并策略按「单条记录」而非整份文件：按 权益登记日|除息日 去重，raw 里多出来的期次直接补进快照。
+    try {
+      const rawFundUrl = "https://raw.githubusercontent.com/fengyin01/stock-ledger/master/fund_dividends.json";
+      const fr = await fetchWithTimeout(rawFundUrl, 8000);
+      if (fr.ok) {
+        const rawF = await fr.json();
+        if (rawF && rawF.funds) {
+          if (!fundDividendsJson) fundDividendsJson = { funds: {} };
+          if (!fundDividendsJson.funds) fundDividendsJson.funds = {};
+          let added = 0;
+          for (const code in rawF.funds) {
+            const rf = rawF.funds[code] || {};
+            const cur = fundDividendsJson.funds[code] || { name: rf.name || "", records: [] };
+            const seen = new Set((cur.records || []).map(x => (x.recordDate || "") + "|" + (x.exDate || "")));
+            const mergedRecs = (cur.records || []).slice();
+            (rf.records || []).forEach(x => {
+              const k = (x.recordDate || "") + "|" + (x.exDate || "");
+              if (seen.has(k)) return;
+              seen.add(k); mergedRecs.push(x); added++;
+            });
+            mergedRecs.sort((a, b) => String(b.exDate || "").localeCompare(String(a.exDate || "")));
+            fundDividendsJson.funds[code] = { name: cur.name || rf.name || "", records: mergedRecs };
+          }
+          const fBase = fundDividendsJson.updatedAt || "";
+          const fRaw = rawF.updatedAt || "";
+          if (fRaw > fBase) fundDividendsJson.updatedAt = fRaw;
+          if (added > 0) fundDividendsJson.source = (fundDividendsJson.source || "eastmoney snapshot") + " +github-raw(+" + added + ")";
+        }
+      }
+    } catch (e) { /* raw 不可达时静默回退同域快照 */ }
+
     // 股票快照：先同域，再用 GitHub raw（Actions 每日更新）覆盖合并
     let merged = { updatedAt: "", source: "eastmoney snapshot", stocks: {} };
     try {
