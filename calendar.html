@@ -1106,8 +1106,16 @@
     eventsByDate = {};
     allEvents.forEach(e => { if (e.date) (eventsByDate[e.date] = eventsByDate[e.date] || []).push(e); });
   }
+  // 每个区块独立 try/catch：单个区块抛错不再连带让后续区块整块空白
+  // （旧实现 renderUpcoming 抛一次错，renderStocks / renderDivDates / renderDataNote 全部不执行）
+  // 返回失败的区块名数组，交由 build() 统一提示，避免成功提示把错误提示覆盖掉
   function renderAllSections() {
-    renderStats(); renderCalendar(); renderUpcoming(); renderStocks(); renderDivDates(); renderDataNote();
+    const sections = [["统计卡", renderStats], ["月历", renderCalendar], ["未来90天", renderUpcoming], ["持仓分红", renderStocks], ["派息日期", renderDivDates], ["数据来源", renderDataNote]];
+    const failed = [];
+    sections.forEach(([name, fn]) => {
+      try { fn(); } catch (e) { console.error("区块渲染失败", name, e); failed.push(name + "（" + (e && e.message ? e.message : "未知错误") + "）"); }
+    });
+    return failed;
   }
 
   async function build(force) {
@@ -1131,9 +1139,10 @@
       }
       allEvents = evs;
       indexEvents();
-      renderAllSections();
+      const failed = renderAllSections();
       checkAndNotify(); // 发现新分红事件时推送 ServerChan 微信提醒
-      toast("分红数据已更新");
+      if (failed.length) toast("部分区块渲染失败：" + failed.join("、"));
+      else toast("分红数据已更新");
     } catch (e) {
       console.error("build 失败", e);
       toast("分红数据加载失败：" + (e && e.message ? e.message : "未知错误"));
@@ -1300,8 +1309,9 @@
       const dd = dayStr(r.anchor).slice(5).replace("-", "/");
       const wd = "周" + "日一二三四五六"[r.anchor.getDay()];
       const dates = [];
-      if (r.ex) dates.push("除息 " + r.ex.slice(5).replace("-", "/"));
-      if (r.pay) dates.push("发放 " + r.pay.slice(5).replace("-", "/"));
+      // r.ex / r.pay 是 parseDay() 返回的 Date 对象，不是字符串，必须经 dayStr 转成 YYYY-MM-DD
+      if (r.ex) dates.push("除息 " + dayStr(r.ex).slice(5).replace("-", "/"));
+      if (r.pay) dates.push("发放 " + dayStr(r.pay).slice(5).replace("-", "/"));
       const isPay = r.payIn && !r.exIn;
       return `<div class="item">
         <div class="date"><div class="d1">${dd}</div><div class="d2">${wd}</div></div>
