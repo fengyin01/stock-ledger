@@ -507,6 +507,9 @@
     }
   }
 </style>
+<!-- 已移除第三方埋点（beacon.cdn.qq.com，未做 SRI 校验）。该脚本与页面同源执行，
+     可读取 localStorage 中的 GitHub 令牌与推送 Key，并上报 location.href / document.title；
+     对个人记账工具来说风险大于收益，故不再加载任何第三方脚本。 -->
 </head>
 <body>
   <div class="main">
@@ -708,8 +711,9 @@
       </div>
       <div class="sync-hint" id="syncStatus">未开启同步 · 自选数据仅保存在本机浏览器</div>
       <div class="sync-field">
-        <label>GitHub 令牌（需 gist 权限，仅本机保存）</label>
+        <label>GitHub 令牌（仅需 gist 权限，仅存本机 localStorage）</label>
         <input id="syncToken" type="password" placeholder="粘贴你的 GitHub Personal Access Token" autocomplete="off" />
+        <div class="sync-hint" style="margin:6px 0 0">建议用 fine-grained token 并只勾选 Gists 权限；点「关闭同步」会一并清除本机令牌。自选与持仓各自保存一份同步码，互不覆盖。</div>
       </div>
       <div class="sync-field">
         <label>同步码（留空=新建一份自选账本；填入另一台设备的同步码=加入同一份账本）</label>
@@ -752,6 +756,13 @@
         </div>
       </div>
 
+      <div class="alert-sep"></div>
+      <div class="field">
+        <label>微信推送 Key（Server 酱 SendKey，仅存本机）</label>
+        <input id="alertPushKey" type="password" placeholder="留空 = 不推送，仅页面内提示" autocomplete="off" />
+        <div class="hint" style="margin:8px 0 0; min-height:0">源码中不再内置 Key：原内置的 SendKey 已随网页源码公开，请到 sct.ftqq.com 重新生成一个再填入。</div>
+      </div>
+
       <div class="hint" id="alertHint"></div>
       <div class="sync-foot">
         <button class="sync-btn danger" id="alertClear">清除提醒</button>
@@ -761,34 +772,104 @@
   </div>
 
 <script>
-  const KEY = "mmbf_stock_ledger_v2";
-  function load() {
-    try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch(e){}
-    return { stocks: [], trades: [], watchlist: [] };
-  }
+  // ================= 存储：自选独立键 + 一次性迁移 =================
+  // 旧版与持仓页共用 mmbf_stock_ledger_v2 的整份对象，任一页面 save() 都会用自己那份
+  // 陈旧内存快照整体覆盖对方（另一标签页刚加的持仓会被抹掉，反之亦然），因此拆键。
+  const KEY = "mmbf_watchlist_v1";
+  const LEGACY_KEY = "mmbf_stock_ledger_v2";
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-  // ---------- 微信推送：Server酱（SCTAPI） ----------
-  // 浏览器端跨域推送：SCTAPI 支持 GET，用 fetch(no-cors) 发出请求（不读响应），
-  // 若 fetch 不可用则降级为 Image() 信标（跨域 GET，请求必发出）。单次只发一次。
-  const SCT_KEY = "SCT322350Ta27zYaSmoOZ6FMRnhwMk3FxJ";
-  const SCT_EP = "https://sctapi.ftqq.com/" + SCT_KEY + ".send";
-  function pushServerChan(title, desp) {
-    if (!SCT_KEY) return;
-    const url = SCT_EP + "?title=" + encodeURIComponent(title) +
-      "&desp=" + encodeURIComponent(desp) + "&_=" + Date.now();
+  // 删除标记统一为 { key, at }：只有时间戳才能区分「远端刚删除」与「本机之后重新添加」
+  function normWlDeleted(arr) {
+    const out = [];
+    (Array.isArray(arr) ? arr : []).forEach(x => {
+      if (typeof x === "string") { const k = x.trim().toLowerCase(); if (k) out.push({ key: k, at: 0 }); }
+      else if (x && x.key) out.push({ key: String(x.key).trim().toLowerCase(), at: Number(x.at) || 0 });
+    });
+    return out;
+  }
+  function delMapOf(arr) {
+    const m = new Map();
+    normWlDeleted(arr).forEach(d => {
+      const cur = m.get(d.key);
+      if (!cur || d.at > cur.at) m.set(d.key, d);
+    });
+    return m;
+  }
+  // 迁移只搬「自选」字段，绝不把持仓 stocks 复制成自选；
+  // 搬完从旧账本里删掉这些字段，避免持仓页整份写回时把它们复活/覆盖。
+  function migrateFromLegacy() {
+    const out = { watchlist: [], wlDeleted: [], migratedFrom: LEGACY_KEY, migratedAt: Date.now() };
     try {
-      fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
-    } catch (e) {
-      try { const im = new Image(); im.referrerPolicy = "no-referrer"; im.src = url; } catch (_) {}
-    }
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
+      if (legacy && typeof legacy === "object") {
+        if (Array.isArray(legacy.watchlist)) out.watchlist = legacy.watchlist;
+        out.wlDeleted = normWlDeleted(legacy.wlDeleted);
+        out.watchlist.forEach(s => { if (s && s.updatedAt == null) s.updatedAt = Date.now(); });
+        delete legacy.watchlist; delete legacy.wlDeleted;
+        delete legacy.watchlistMigrated; delete legacy.wlIdIsolated;
+        localStorage.setItem(LEGACY_KEY, JSON.stringify(legacy));
+      }
+    } catch (e) {}
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) {}
+    return out;
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const o = JSON.parse(raw) || {}; o.watchlist = o.watchlist || []; return o; }
+    } catch (e) {}
+    return migrateFromLegacy();
   }
 
-  // ---------- 多端实时同步（与持仓页机制一致，自选独立 Gist 文件） ----------
-  const SYNC_KEY = "mmbf_sync_cfg_v1";
+  // ================= 微信推送（自备 Key，源码内不含任何密钥） =================
+  // 【重要】原实现把 Server 酱 SendKey 硬编码在页面源码里。静态托管的源码是公开的，
+  // 任何人拿到 Key 就能给你的微信发任意内容、或耗尽每日额度让真实提醒失效，
+  // 因此改为「由用户在本机自行填写并只保存在 localStorage」，源码中不再出现任何 Key。
+  const PUSH_KEY = "mmbf_push_cfg_v1";
+  const pushCfg = { key: "" };
+  function loadPushCfg() {
+    try { const c = JSON.parse(localStorage.getItem(PUSH_KEY)); if (c && typeof c.key === "string") pushCfg.key = c.key; } catch (e) {}
+  }
+  function savePushCfg() {
+    try { localStorage.setItem(PUSH_KEY, JSON.stringify({ key: pushCfg.key })); } catch (e) {}
+  }
+  // 返回值只表示「请求已发出」，不代表对方受理：no-cors 响应不可读，
+  // 无法确认 Server 酱是否返回 {"code":0}（额度用尽 / Key 失效都会静默失败）。
+  function pushServerChan(title, desp) {
+    if (!pushCfg.key) return false;
+    const url = "https://sctapi.ftqq.com/" + encodeURIComponent(pushCfg.key) + ".send?title=" +
+      encodeURIComponent(title) + "&desp=" + encodeURIComponent(desp) + "&_=" + Date.now();
+    let sent = false;
+    try {
+      // 这里必须用 no-cors：SCTAPI 不返回 CORS 头，读不到响应体也就无法判断成败
+      fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" })
+        .catch(() => { try { const im = new Image(); im.referrerPolicy = "no-referrer"; im.src = url; } catch (_) {} });
+      sent = true;
+    } catch (e) {
+      try { const im = new Image(); im.referrerPolicy = "no-referrer"; im.src = url; sent = true; } catch (_) {}
+    }
+    return sent;
+  }
+
+  // ================= 多端同步（自选独立 Gist 文件 + 独立配置键） =================
+  // 旧版与持仓页共用 mmbf_sync_cfg_v1，但两页写的是不同的 Gist 文件（watchlist.json / state.json），
+  // 共用同一格配置会互相覆盖 room 与 token，出现「两台设备各写一个 Gist、却都显示已同步」的静默分裂。
+  const SYNC_KEY = "mmbf_sync_cfg_v1:watchlist";
+  const SYNC_KEY_LEGACY = "mmbf_sync_cfg_v1";
   const sync = { enabled: false, token: "", room: "", device: "", lastSeen: 0, timer: null };
   function loadSyncCfg() {
-    try { const c = JSON.parse(localStorage.getItem(SYNC_KEY)); if (c) Object.assign(sync, c); } catch(e){}
+    try {
+      const c = JSON.parse(localStorage.getItem(SYNC_KEY));
+      if (c) { Object.assign(sync, c); return; }
+      // 一次性迁移：取回本机既有令牌/同步码，此后自选与持仓各存一份、互不覆盖
+      const legacy = JSON.parse(localStorage.getItem(SYNC_KEY_LEGACY));
+      if (legacy && (legacy.token || legacy.room)) {
+        sync.enabled = !!legacy.enabled; sync.token = legacy.token || "";
+        sync.room = legacy.room || ""; sync.device = legacy.device || ""; sync.lastSeen = legacy.lastSeen || 0;
+        saveSyncCfg();
+      }
+    } catch (e) {}
   }
   function saveSyncCfg() {
     localStorage.setItem(SYNC_KEY, JSON.stringify({ enabled: sync.enabled, token: sync.token, room: sync.room, device: sync.device, lastSeen: sync.lastSeen }));
@@ -828,11 +909,16 @@
   // 自选专属的「已删除」标识：用 代码/名称 作为跨设备稳定的 key
   // （不能用 id：同一只股票在两台设备上生成的 id 不同，删除无法互相传播）
   function wlKey(s) { return String((s && (s.code || s.name)) || "").trim().toLowerCase(); }
+  // 应用删除标记：仅当「本条在本机被重新添加（updatedAt 晚于删除时刻）」才保留，否则删除生效。
+  // 旧格式标记（字符串、无时间戳 at===0）按原语义直接删除。
   function applyDeleted(s) {
-    // 已存在于自选列表中的股票，其删除标记应视为「已撤销」，不再隐藏
-    const present = new Set((s.watchlist || []).map(wlKey));
-    const del = new Set((s.wlDeleted || []).filter(k => !present.has(k)));
-    s.watchlist = (s.watchlist || []).filter(x => !del.has(wlKey(x)));
+    const del = delMapOf(s.wlDeleted);
+    s.watchlist = (s.watchlist || []).filter(x => {
+      const d = del.get(wlKey(x));
+      if (!d) return true;
+      if (!d.at) return false;
+      return (Number(x.updatedAt) || 0) > d.at;
+    });
     return s;
   }
   // 两台设备各自生成的 id 不同，合并后会出现同一只股票的重复条目 → 按 代码/名称 收敛，保留最新
@@ -926,10 +1012,15 @@
   // 把远端数据并入本地：按 id 取新，再按 代码/名称 收敛，最后套用删除标记
   function mergeRemote(r) {
     state.watchlist = dedupeByKey(mergeArr(state.watchlist, r.watchlist || []));
-    state.wlDeleted = Array.from(new Set([...(state.wlDeleted || []), ...(r.wlDeleted || [])]));
-    // 本地已重新添加的（存在于 watchlist 中）不应再被远端删除标记隐藏
-    const present = new Set(state.watchlist.map(wlKey));
-    state.wlDeleted = state.wlDeleted.filter(k => !present.has(k));
+    // 删除标记按 key 取「更晚」的一条合并。
+    // 旧逻辑是「本机 watchlist 里存在该 key 就丢弃远端删除标记」，会把「另一台设备刚删除」
+    // 误判成「本机已重新添加」，于是删除被复活、并被本机再推送回远端。
+    const del = delMapOf(state.wlDeleted);
+    normWlDeleted(r.wlDeleted).forEach(d => {
+      const cur = del.get(d.key);
+      if (!cur || d.at > cur.at) del.set(d.key, d);
+    });
+    state.wlDeleted = Array.from(del.values());
     applyDeleted(state);
   }
   async function pushSync() {
@@ -986,33 +1077,27 @@
 
   const state = load();
   loadSyncCfg();
-  // 「自选」与「持仓」数据相互独立：自选使用专属的 watchlist 数组，不写入持仓使用的 state.stocks
+  loadPushCfg();
+  // 「自选」与「持仓」分区存放：自选=watchlist/wlDeleted，持仓=stocks/trades（另一个存储键）。
+  // 迁移只搬 watchlist，绝不再把 stocks 复制成自选基线（那会让新设备首次打开就被灌入整份持仓）。
   if (!Array.isArray(state.watchlist)) state.watchlist = [];
-  if (!Array.isArray(state.deleted)) state.deleted = [];
-  // 自选专属删除表：绝不与持仓共用 state.deleted
-  // （共用会导致在持仓页删掉的条目，把自选里 id 相同的条目一并"永久删除"，同步拉回来也会被立刻过滤掉）
-  if (!Array.isArray(state.wlDeleted)) state.wlDeleted = [];
-  if (!state.watchlistMigrated) {
-    // 一次性兼容迁移：首次进入时避免自选列表变空，把既有 stocks 浅拷贝为自选基线；之后两者各自独立
-    if (state.watchlist.length === 0 && Array.isArray(state.stocks) && state.stocks.length) {
-      state.watchlist = state.stocks.map(s => ({ ...s, id: uid(), updatedAt: Date.now() }));
-    }
-    state.watchlistMigrated = true;
-    save();
-  }
-  // 为历史数据（可能缺 id）补一个稳定标识，便于删除时精确定位
-  state.watchlist.forEach(s => { if (s.id == null) { s.id = uid(); s.updatedAt = Date.now(); } });
-  // 一次性修复：历史迁移遗留的「自选 id == 持仓 id」，重新分配，彻底与持仓解耦
-  if (!state.wlIdIsolated) {
-    const holdIds = new Set((state.stocks || []).map(x => x.id));
-    state.watchlist.forEach(s => { if (holdIds.has(s.id)) { s.id = uid(); s.updatedAt = Date.now(); } });
-    state.wlIdIsolated = true;
-    save({ skipPush: true });
-  }
+  state.wlDeleted = normWlDeleted(state.wlDeleted);
+  // 为历史数据补稳定标识（缺 id 无法精确定位，缺 updatedAt 无法参与 LWW 合并）
+  state.watchlist.forEach(s => { if (s.id == null) s.id = uid(); });
   state.watchlist = dedupeByKey(state.watchlist);
-  // 进入自选页默认直接展示「电力」板块
-  let activeSector = "电力";
+  applyDeleted(state);
+  save({ skipPush: true });
+  // 默认展示「全部」：旧默认值是「电力」且界面上没有「全部」入口，
+  // 导致非电力板块、或未选板块（sector 为空）的股票打开后完全看不见、也删不掉。
+  let activeSector = "全部";
 
+  // 所有插值进 innerHTML 的内容一律转义：股票名/代码来自手输与第三方接口，
+  // 且自选数据会从 Gist 同步合入，未转义等于给「远端可注入的持久 XSS」留口子。
+  // （index.html 一直有 escapeHtml，自选页此前一次都没用。）
+  function escapeHtml(v) {
+    if (v === null || v === undefined) return "";
+    return String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
   function toast(msg) {
     const el = document.getElementById("toast");
     el.textContent = msg; el.classList.add("show");
@@ -1159,10 +1244,26 @@
     if (s.isUS) return "us";
     return marketOf((s.code || "").trim());
   }
-  function quoteKey(s) {
-    const code = (s.code || "").trim();
-    return code ? mktPrefixForStock(s) + code : "";
+  // 代码规范化：腾讯港股要 5 位补零（实测 v_hk00700）、美股要大写（实测 v_usAAPL）、
+  // A股/场内基金 6 位补零。手填 "700" / "aapl" 会让行情键失效且静默无价。
+  function normalizeCode(s) {
+    let c = String((s && s.code) || "").trim();
+    if (!c) return "";
+    if (s.isHK) return c.replace(/^0+/, "").padStart(5, "0");
+    if (s.isUS) return c.toUpperCase();
+    if (/^\d+$/.test(c)) return c.padStart(6, "0");
+    return c;
   }
+  function isOtcFund(s) { return !!(s && s.fundType === "场外基金"); }
+  // 行情缓存键：场外基金走「每日净值」接口，用 nav 前缀与交易所行情区分开
+  function quoteKey(s) {
+    if (!s) return "";
+    const code = normalizeCode(s);
+    if (!code) return "";
+    if (isOtcFund(s)) return "nav" + code;
+    return mktPrefixForStock(s) + code;
+  }
+  const isNavKey = k => typeof k === "string" && k.slice(0, 3) === "nav";
 
   // ---------- 3) 行情缓存（仅本会话内存/sessionStorage，不写入持久化数据、不参与同步） ----------
   const liveMap = Object.create(null);   // "sh600000" -> { price, prev, pct, qtime, ts }
@@ -1215,16 +1316,55 @@
     });
   }
 
+  // 场外基金：交易所行情接口没有它的价格，取天天基金历史净值（pingzhongdata）最新一条。
+  // 顺序请求：该 JS 会把 Data_netWorthTrend 挂在 window 上，并发请求会互相覆盖导致张冠李戴。
+  function fetchFundNavBatch(keys) {
+    return keys.reduce((p, k) => p.then(n => fetchFundNav(k).then(ok => n + (ok ? 1 : 0))), Promise.resolve(0));
+  }
+  function fetchFundNav(key) {
+    const code = key.slice(3);
+    return new Promise(resolve => {
+      const sc = document.createElement("script");
+      let done = false;
+      const finish = ok => { if (done) return; done = true; try { sc.remove(); } catch (e) {} resolve(ok); };
+      sc.onload = () => {
+        try {
+          const arr = window.Data_netWorthTrend;
+          if (Array.isArray(arr) && arr.length) {
+            const last = arr[arr.length - 1] || {};
+            const nav = parseFloat(last.y);
+            if (isFinite(nav) && nav > 0) {
+              const d = new Date(last.x);
+              const qt = isNaN(d.getTime()) ? "" : pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+              liveMap[key] = { price: nav, prev: 0, pct: null, qtime: qt, ts: nowTs() };
+              saveLive();
+              return finish(true);
+            }
+          }
+          finish(false);
+        } catch (e) { finish(false); }
+      };
+      sc.onerror = () => finish(false);
+      sc.src = "https://fund.eastmoney.com/pingzhongdata/" + encodeURIComponent(code) + ".js?v=" + Date.now();
+      setTimeout(() => finish(false), 8000);
+      document.head.appendChild(sc);
+    });
+  }
+
   // ---------- 4) 刷新 + 局部重绘（不重建列表，条目顺序与内容保持不变） ----------
   let quoteLoading = false;
   function refreshQuotes() {
-    const keys = Array.from(new Set((state.watchlist || []).map(quoteKey).filter(Boolean)));
-    if (!keys.length) { updateQuoteBar(); return Promise.resolve(0); }
+    const allKeys = Array.from(new Set((state.watchlist || []).map(quoteKey).filter(Boolean)));
+    if (!allKeys.length) { updateQuoteBar(); return Promise.resolve(0); }
+    const keys = allKeys.filter(k => !isNavKey(k));      // 交易所行情（腾讯）
+    const navKeys = allKeys.filter(isNavKey);            // 场外基金净值（天天基金）
     quoteLoading = true; updateQuoteBar();
     const batches = [];
     for (let i = 0; i < keys.length; i += 30) batches.push(keys.slice(i, i + 30));
     return Promise.all(batches.map(fetchQuotesBatch))
       .then(list => list.reduce((a, b) => a + b, 0))
+      .catch(() => 0)
+      .then(n => fetchFundNavBatch(navKeys).then(m => n + m))
       .catch(() => 0)
       .then(n => { quoteLoading = false; paintQuotes(); checkAlerts(); updateQuoteBar(); return n; });
   }
@@ -1250,8 +1390,14 @@
       }
       const cEl = el.querySelector(".js-chg");
       if (cEl) {
-        cEl.className = "js-chg " + (q.pct > 0 ? "si-up" : (q.pct < 0 ? "si-down" : "si-neutral"));
-        cEl.textContent = chgText(kind, q.pct);
+        if (q.pct == null) {
+          // 场外基金只有每日净值，没有日内涨跌幅（旧代码在这里会因 null.toFixed 抛错）
+          cEl.className = "js-chg si-neutral";
+          cEl.textContent = "净值" + (q.qtime ? " " + q.qtime : "");
+        } else {
+          cEl.className = "js-chg " + (q.pct > 0 ? "si-up" : (q.pct < 0 ? "si-down" : "si-neutral"));
+          cEl.textContent = chgText(kind, q.pct);
+        }
       }
       const yEl = el.querySelector(".js-yield");
       if (yEl && div > 0 && q.price > 0) yEl.innerHTML = yieldBadge(div / q.price * 100);
@@ -1289,9 +1435,11 @@
       const sec = (s.sector || "").trim();
       if (sec && !sectors.includes(sec)) sectors.push(sec);
     }
-    // 不再渲染「全部」按钮；默认 activeSector === "全部" 时展示全部股票
-    document.getElementById("sectorTabs").innerHTML = sectors.map(sec =>
-      `<button class="sector-tab ${sec===activeSector?"active":""}" data-sec="${sec}">${sec}</button>`
+    // 固定保留「全部」入口：没有它就永远看不到「其他板块」和未选板块（sector 为空）的股票
+    const keys = ["全部"].concat(sectors);
+    if (activeSector !== "全部" && sectors.indexOf(activeSector) < 0) activeSector = "全部";
+    document.getElementById("sectorTabs").innerHTML = keys.map(sec =>
+      `<button class="sector-tab ${sec===activeSector?"active":""}" data-sec="${escapeHtml(sec)}">${escapeHtml(sec)}</button>`
     ).join("");
   }
 
@@ -1308,7 +1456,8 @@
     }
     const filtered = activeSector === "全部" ? stocks : stocks.filter(s => (s.sector||"") === activeSector);
     if (!filtered.length) {
-      listEl.innerHTML = `<div class="empty-state"><p>该板块暂无股票</p></div>`;
+      listEl.innerHTML = `<div class="empty-state"><p>「${escapeHtml(activeSector)}」板块暂无股票</p>
+        <p style="margin-top:6px;font-size:12px">点上方「全部」可查看其余自选</p></div>`;
       return;
     }
     listEl.innerHTML = filtered.map(s => {
@@ -1327,29 +1476,35 @@
       const yld = div > 0 && price > 0 ? div / price * 100 : (Number(s.yield) || 0);
       const dec = (s.isHK || fund) ? 3 : 2;
       const cur = s.isUS ? "$" : (s.isHK ? "HK$" : "¥");
-      const suf = fund ? `<span class="suf">净值</span>` : "";
+      // 只有场外基金的价格才是「净值」；场内 ETF/LOF 拿到的是交易所实时价，标成「净值」是事实错误
+      const isOtcFund = s.fundType === "场外基金";
+      const suf = isOtcFund ? `<span class="suf">净值</span>` : (fund ? `<span class="suf">市价</span>` : "");
       const divLabel = fund ? "每份红利" : "每股红利";
       const chgHtml = pct == null
         ? `<span class="js-chg si-neutral">${chgPrefix(kind)} —</span>`
         : `<span class="js-chg ${pcls}">${chgText(kind, pct)}</span>`;
-      const href = `matrix.html?code=${encodeURIComponent(s.code||"")}&name=${encodeURIComponent(s.name||"")}&dividend=${encodeURIComponent(s.dividend||"")}&price=${encodeURIComponent(price||"")}&isHK=${!!s.isHK}&isUS=${!!s.isUS}`;
+      // 带上 id：matrix 只有按 id 才能取回本机的 持股/成本/基金类型/板块，
+      // 否则「模拟加仓」永远显示无持仓、ETF 会被按股票口径处理。
+      const href = `matrix.html?id=${encodeURIComponent(s.id || "")}&code=${encodeURIComponent(s.code||"")}&name=${encodeURIComponent(s.name||"")}&dividend=${encodeURIComponent(s.dividend||"")}&price=${encodeURIComponent(price||"")}&sector=${encodeURIComponent(s.sector||"")}&fundType=${encodeURIComponent(s.fundType||"")}&isHK=${!!s.isHK}&isUS=${!!s.isUS}`;
       // 价格提醒按钮状态
       const al = s.alert;
       const alertSet = !!(al && ((al.up && al.up.enabled) || (al.down && al.down.enabled)));
       const alertFired = !!(al && ((al.up && al.up.enabled && al.up.triggered) || (al.down && al.down.enabled && al.down.triggered)));
       const alertClass = alertFired ? "triggered" : (alertSet ? "active" : "");
-      const alertTitle = alertFired ? "价格提醒已触发（已推送微信）" : (alertSet ? "已设置价格提醒，点击修改" : "设置价格提醒");
-      return `<div class="stock-item-wrapper" data-qk="${qk}" data-dec="${dec}" data-div="${div}" data-kind="${kind}">
-        <button class="del-btn" data-id="${s.id || ""}" title="移除自选" aria-label="移除自选">
+      const alertTitle = alertFired
+        ? (pushCfg.key ? "价格提醒已触发（已发出微信推送）" : "价格提醒已触发（未配置推送 Key，仅页面内提示）")
+        : (alertSet ? "已设置价格提醒，点击修改" : "设置价格提醒");
+      return `<div class="stock-item-wrapper" data-qk="${escapeHtml(qk)}" data-dec="${dec}" data-div="${div}" data-kind="${kind}">
+        <button class="del-btn" data-id="${escapeHtml(s.id || "")}" title="移除自选" aria-label="移除自选">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
         </button>
         <a class="stock-item-inner" href="${href}">
           <div class="si-left">
-            <div class="si-name">${s.name || s.code} ${tagsHtml(s)}</div>
+            <div class="si-name">${escapeHtml(s.name || s.code)} ${tagsHtml(s)}</div>
             <div class="si-meta">
-              <span>${s.code || ""}</span>
+              <span>${escapeHtml(s.code || "")}</span>
               <span>${divLabel}${cur}${div.toFixed(3)}</span>
               ${chgHtml}
             </div>
@@ -1357,7 +1512,7 @@
           <div class="si-right">
             <div class="si-price"><span class="cur">${cur}</span><span class="js-price">${price.toFixed(dec)}</span>${suf}</div>
             <span class="js-yield">${yieldBadge(yld)}</span>
-            <button class="alert-btn ${alertClass}" data-id="${s.id}" title="${alertTitle}" aria-label="设置价格提醒">
+            <button class="alert-btn ${alertClass}" data-id="${escapeHtml(s.id)}" title="${escapeHtml(alertTitle)}" aria-label="设置价格提醒">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <span>提醒</span>
             </button>
@@ -1407,9 +1562,13 @@
     if (idx >= 0) {
       const removed = state.watchlist.splice(idx, 1)[0];
       if (removed) {
-        if (!Array.isArray(state.wlDeleted)) state.wlDeleted = [];
         const k = wlKey(removed);
-        if (k && state.wlDeleted.indexOf(k) < 0) state.wlDeleted.push(k);
+        if (k) {
+          // 删除标记带时间戳：没有 at 就无法与「本机之后重新添加」区分，
+          // 别的设备会把这条删除当作「已撤销」丢弃，删除就复活了。
+          state.wlDeleted = normWlDeleted(state.wlDeleted).filter(d => d.key !== k);
+          state.wlDeleted.push({ key: k, at: Date.now() });
+        }
       }
       save();
     }
@@ -1465,8 +1624,10 @@
     pullSync().then(startSyncPolling);
   });
   document.getElementById("syncDisable").addEventListener("click", () => {
-    sync.enabled = false; saveSyncCfg(); stopSyncPolling(); setDot("", "未同步");
-    closeMask("syncMask"); updateSyncBanner(); toast("已关闭同步");
+    // 关闭同步时一并清掉本机保存的令牌，避免明文长期留在 localStorage 里
+    sync.enabled = false; sync.token = ""; sync.lastSeen = 0;
+    saveSyncCfg(); stopSyncPolling(); setDot("", "未同步");
+    closeMask("syncMask"); updateSyncBanner(); toast("已关闭同步并清除本机令牌");
   });
 
   // ---------- 添加股票 / ETF 弹窗 ----------
@@ -1483,22 +1644,35 @@
     return /^5\d{5}$/.test(code) || /^1[5-9]\d{4}$/.test(code);
   }
   // Eastmoney secid 前缀 → gtimg 市场前缀
+  // 美股实测前缀是 105(NASDAQ)/106(NYSE)/107(AMEX)：suggest 接口返回的 QuoteID 形如 "105.AAPL"。
+  // 旧实现只认 "155"，导致搜索到的美股 mktPrefix=null → 不取行情、不打美股标记 →
+  // quoteKey 变成 szAAPL → 永远没有实时价，价格提醒也永远不触发（且无任何提示）。
   function mktPrefixFromSecid(secid) {
     const pre = (secid || "").split(".")[0];
     if (pre === "1") return "sh";
     if (pre === "0") return "sz";
     if (pre === "116") return "hk";
-    if (pre === "155") return "us";
+    if (pre === "105" || pre === "106" || pre === "107" || pre === "155") return "us";
     return null;
   }
 
-  // 拉取腾讯行情（JSONP，免 CORS）：名称 / 价格 / 股息率(TTM)
+  // 腾讯行情字段下标（用真实响应逐字段核对过）：
+  //   股息率(TTM)%：A股 f[64]（茅台 4.05 ↔ 前复权K线披露 FY2025 合计 51.98 ÷ 1285.13 = 4.05%）
+  //                港股 f[47]（腾讯 1.25 = 每股派息 f[72]=5.309 港元 ÷ 425.6 = 1.25%）
+  //                美股 f[52]（苹果 0.34 ≈ 年派息 1.08 美元 ÷ 315.34 = 0.34%）
+  //   注意：港美股的字段布局与 A 股整体位移（A股类型标记在 f[61]、港股在 f[63]），
+  //   旧实现一律读 f[64]，港股会取到 20.41，反推出 86.86 港元/股的红利（实际约 4.5）。
+  const DIV_YIELD_IDX = { sh: 64, sz: 64, bj: 64, hk: 47, us: 52 };
+  const HK_DPS_IDX = 72;   // 港股：每股派息（港元），优先直接用原值
+
+  // 拉取腾讯行情（JSONP，免 CORS）：名称 / 价格 / 股息率(TTM) / 港股每股派息
   function fetchGtimg(mktPrefix, code) {
     return new Promise((resolve) => {
       const gvar = "v_" + mktPrefix + code;
       const sc = document.createElement("script");
       let done = false;
       const finish = (val) => { if (done) return; done = true; try { sc.remove(); } catch (e) {} resolve(val); };
+      sc.charset = "GBK";
       sc.onload = () => finish(window[gvar]);
       sc.onerror = () => finish(null);
       sc.src = "https://qt.gtimg.cn/q=" + mktPrefix + code;
@@ -1509,11 +1683,15 @@
       const f = raw.replace(/^"+/, "").replace(/"+$/, "").split("~");
       const name = f[1] || "";
       const price = parseFloat(f[3]);
-      const divYield = parseFloat(f[64]); // 股息率(TTM) %
+      const yi = DIV_YIELD_IDX[mktPrefix];
+      const rawYield = yi == null ? NaN : parseFloat(f[yi]);
+      let divPerShare = null;
+      if (mktPrefix === "hk") { const d = parseFloat(f[HK_DPS_IDX]); if (isFinite(d) && d > 0) divPerShare = d; }
       return {
         name,
         price: isNaN(price) ? null : price,
-        divYield: isNaN(divYield) ? null : divYield,
+        divYield: isNaN(rawYield) ? null : rawYield,
+        divPerShare,
         mktPrefix, code
       };
     });
@@ -1531,7 +1709,8 @@
         const data = (j.result && j.result.data) || [];
         if (!data.length) return cb({ ok: false });
         const curYear = new Date().getFullYear();
-        const fy = rec => { const d = rec.REPORT_DATE || rec.EX_DIVIDEND_DATE; return d ? new Date(String(d)).getFullYear() : null; };
+        // 直接截取年份，不走 Date 解析：'YYYY-MM-DD' 会被按 UTC 解析，负时区下年份可能差一年
+        const fy = rec => { const d = rec.REPORT_DATE || rec.EX_DIVIDEND_DATE; const y = d ? Number(String(d).slice(0, 4)) : NaN; return Number.isFinite(y) ? y : null; };
         const byYear = {};
         data.forEach(r => {
           const y = fy(r);
@@ -1555,7 +1734,7 @@
   // 将行情结果填充到表单
   function applyQuote(info) {
     if (!info) return;
-    const { name, price, divYield, mktPrefix, code } = info;
+    const { name, price, divYield, divPerShare, mktPrefix, code } = info;
     const sName = document.getElementById("sName");
     const sPrice = document.getElementById("sPrice");
     const sDividend = document.getElementById("sDividend");
@@ -1578,17 +1757,26 @@
       setCheck("sInFund", true); setCheck("sOutFund", false);
       sPrice.step = "0.001";
     } else {
-      // A 股：优先用东方财富分红方案接口抓取准确的「前一财年合计每股红利」
+      // 兜底估算：优先用「每股派息」原值，其次用股息率反推。
+      // 必须做合理性校验（0 < 股息率 < 30%），否则字段错位/接口异常会灌入垃圾红利（index.html 一直有这道保护）。
       const applyEstimate = () => {
-        if (divYield != null && price != null && !sDividend.value) {
+        if (sDividend.value) return;
+        if (divPerShare != null && divPerShare > 0) { sDividend.value = divPerShare.toFixed(3); return; }
+        if (divYield != null && divYield > 0 && divYield < 30 && price != null && price > 0) {
           sDividend.value = (price * divYield / 100).toFixed(3);
         }
       };
-      fetchStockDividend(code, (r) => {
-        if (r.ok && r.perShare > 0) sDividend.value = r.perShare.toFixed(3);
-        else applyEstimate();
-      });
-      if (mktPrefix === "sh" || mktPrefix === "sz") fetchIndustry(code, mktPrefix);
+      if (mktPrefix === "hk" || mktPrefix === "us") {
+        // 港美股没有 A 股口径的「分红方案表」，用行情自带口径（字段已在 fetchGtimg 按市场取值）
+        applyEstimate();
+      } else {
+        // A 股：优先用东方财富分红方案接口抓取准确的「前一财年合计每股红利」
+        fetchStockDividend(code, (r) => {
+          if (r.ok && r.perShare > 0) { if (!sDividend.value) sDividend.value = r.perShare.toFixed(3); }
+          else applyEstimate();
+        });
+        if (mktPrefix === "sh" || mktPrefix === "sz") fetchIndustry(code, mktPrefix);
+      }
     }
   }
 
@@ -1605,7 +1793,9 @@
     }).catch(() => {});
   }
 
-  // 名称模糊搜索（Eastmoney 智能选股，CORS）
+  // 名称模糊搜索（Eastmoney suggest，CORS）
+  // 旧实现用的 push2 .../smartbox/get 实测返回 HTTP 404（同项目 dividend-forecast.html 走的就是 suggest 系接口）
+  const EM_SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E32628";
   let searchReqId = 0;
   function searchByName(query) {
     const box = document.getElementById("nameResults");
@@ -1614,24 +1804,34 @@
     // 输入的是 6 位代码 → 直接按代码拉行情
     if (/^\d{6}$/.test(query)) {
       box.classList.remove("show"); box.innerHTML = "";
-      fetchGtimg(marketOf(query), query).then(applyQuote);
+      applyCodeQuote(query);
       return;
     }
     const reqId = ++searchReqId;
-    fetch("https://push2.eastmoney.com/api/qt/stock/smartbox/get?pz=8&isType=NEW&key=" + encodeURIComponent(query) + "&fields=name,code", { mode: "cors" })
+    // 结果里混有「Apple Inc Notes」这类公司债条目，按 Classify 过滤，美股另按 SecurityType=20 只保留正股
+    const url = "https://searchapi.eastmoney.com/api/suggest/get?input=" + encodeURIComponent(query) +
+      "&type=14&token=" + EM_SEARCH_TOKEN + "&count=10";
+    fetch(url, { mode: "cors", cache: "no-store" })
       .then(r => r.ok ? r.json() : null)
       .then(j => {
         if (reqId !== searchReqId) return; // 过期请求
-        const list = j && j.data && j.data.result;
-        if (!list || !list.length) {
+        const rows = (j && j.QuotationCodeTable && j.QuotationCodeTable.Data) || [];
+        const list = rows.filter(d => {
+          if (!d || !d.QuoteID || !d.Name) return false;
+          if (["AStock", "BStock", "HK", "Fund", "UsStock"].indexOf(d.Classify) < 0) return false;
+          if (d.Classify === "UsStock" && String(d.SecurityType) !== "20") return false;
+          return true;
+        }).slice(0, 8);
+        if (!list.length) {
           box.innerHTML = '<div class="sr-empty">未找到匹配，请直接输入 6 位代码</div>';
           box.classList.add("show");
           return;
         }
-        box.innerHTML = list.slice(0, 8).map(it => {
-          const secid = it.code || "";
+        box.innerHTML = list.map(it => {
+          const secid = it.QuoteID;
           const c = secid.split(".").pop();
-          return '<div class="sr-item" data-secid="' + secid + '"><span class="sr-name">' + (it.name || "") + '</span><span class="sr-code">' + c + '</span></div>';
+          return '<div class="sr-item" data-secid="' + escapeHtml(secid) + '"><span class="sr-name">' +
+            escapeHtml(it.Name) + '</span><span class="sr-code">' + escapeHtml(c) + '</span></div>';
         }).join("");
         box.classList.add("show");
       })
@@ -1663,15 +1863,21 @@
     const v = document.getElementById("sName").value;
     nameTimer = setTimeout(() => searchByName(v), 350);
   });
+  // 场外基金不在交易所挂牌：勾选后不去拉交易所行情。
+  // 否则 110022（易方达消费）会被 marketOf 判成沪市、命中 sh110022 = 沪市可转债的行情与名称。
+  function applyCodeQuote(code) {
+    if (getCheck("sOutFund")) { toast("场外基金不取交易所行情，请手填最新净值"); return; }
+    fetchGtimg(marketOf(code), code).then(applyQuote);
+  }
   document.getElementById("sCode").addEventListener("input", () => {
     clearTimeout(codeTimer);
     const v = document.getElementById("sCode").value.trim();
-    codeTimer = setTimeout(() => { if (/^\d{6}$/.test(v)) fetchGtimg(marketOf(v), v).then(applyQuote); }, 350);
+    codeTimer = setTimeout(() => { if (/^\d{6}$/.test(v)) applyCodeQuote(v); }, 350);
   });
   // 失焦时若名称字段为 6 位代码也触发
   document.getElementById("sName").addEventListener("blur", () => {
     const v = document.getElementById("sName").value.trim();
-    if (/^\d{6}$/.test(v)) fetchGtimg(marketOf(v), v).then(applyQuote);
+    if (/^\d{6}$/.test(v)) applyCodeQuote(v);
   });
 
   function openAddModal() {
@@ -1690,12 +1896,19 @@
   document.getElementById("sHK").addEventListener("change", e => { if (e.target.checked) setCheck("sUS", false); });
   document.getElementById("sUS").addEventListener("change", e => { if (e.target.checked) setCheck("sHK", false); });
   document.getElementById("sInFund").addEventListener("change", e => { if (e.target.checked) { setCheck("sOutFund", false); document.getElementById("sPrice").step = "0.001"; } });
-  document.getElementById("sOutFund").addEventListener("change", e => { if (e.target.checked) { setCheck("sInFund", false); document.getElementById("sPrice").step = "0.001"; } });
+  document.getElementById("sOutFund").addEventListener("change", e => {
+    if (e.target.checked) {
+      setCheck("sInFund", false);
+      document.getElementById("sPrice").step = "0.001";
+      // 之前按 6 位代码自动填的价格可能是别的品种（例如可转债），清掉避免误用
+      document.getElementById("sPrice").value = "";
+    }
+  });
 
   document.getElementById("stockSave").addEventListener("click", () => {
     const name = document.getElementById("sName").value.trim();
     if (!name) { toast("请填写股票名称"); return; }
-    const code = document.getElementById("sCode").value.trim();
+    let code = document.getElementById("sCode").value.trim();
     let sector = document.getElementById("sSector").value.trim();
     const isHK = getCheck("sHK"), isUS = getCheck("sUS");
     const isInFund = getCheck("sInFund"), isOutFund = getCheck("sOutFund");
@@ -1707,20 +1920,27 @@
     else if (isOutFund) fundType = "场外基金";
     if (!sector && isHK) sector = "港股";
     if (!sector && isUS) sector = "美股";
+    // 代码规范化后再入库（港股补 5 位、美股大写、A股补 6 位），
+    // 否则手填 "700"/"aapl" 生成的行情键无效，永远没有实时价、提醒也永不触发。
+    if (code) code = normalizeCode({ code: code, isHK: isHK, isUS: isUS });
 
     const price = num(document.getElementById("sPrice").value);
     const dividend = num(document.getElementById("sDividend").value);
     const yieldVal = price && dividend ? dividend / price * 100 : null;
 
     // 重新添加此前删过的股票时，把它从「已删除」名单里摘掉，否则同步后会被再次过滤掉
-    const addKey = String(code || name).trim().toLowerCase();
-    state.wlDeleted = (state.wlDeleted || []).filter(x => x !== addKey);
+    const addKey = wlKey({ code: code, name: name });
+    state.wlDeleted = normWlDeleted(state.wlDeleted).filter(d => d.key !== addKey);
+    // 同一只股票只保留一条：旧实现无条件 push，重复添加当场并列显示，
+    // 重载后被 dedupeByKey 静默合并，用户会以为刚填的板块/红利自己消失了。
+    const dupIdx = state.watchlist.findIndex(x => wlKey(x) === addKey);
+    if (dupIdx >= 0) state.watchlist.splice(dupIdx, 1);
 
     state.watchlist.push({
       id: uid(), name, code, sector,
       price, dividend, yield: yieldVal,
       currency, fundType, dividendConfirmed: getCheck("sDivConfirmed"),
-      isHK, isUS, newlyAdded: true, updatedAt: Date.now()
+      isHK, isUS, updatedAt: Date.now()
     });
     save(); closeMask("stockMask"); toast("已添加到自选");
     // 若当前正在按板块筛选，且新增股票不属于该板块，自动切回全部展示
@@ -1741,7 +1961,8 @@
     if (!s) return;
     alertStockId = id;
     document.getElementById("alertStockName").innerHTML =
-      (s.name || s.code || "未命名") + (s.code ? " <small>" + s.code + "</small>" : "");
+      escapeHtml(s.name || s.code || "未命名") + (s.code ? " <small>" + escapeHtml(s.code) + "</small>" : "");
+    document.getElementById("alertPushKey").value = pushCfg.key || "";
     const price = stockCurrentPrice(s);
     const dec = (s.isHK || isFund(s)) ? 3 : 2;
     document.getElementById("alertCurPrice").textContent = price ? price.toFixed(dec) : "—";
@@ -1751,7 +1972,11 @@
     setCheck("alertDownOn", !!(a.down && a.down.enabled));
     document.getElementById("alertDownPrice").value = (a.down && a.down.price != null) ? a.down.price : "";
     const fired = (a.up && a.up.enabled && a.up.triggered) || (a.down && a.down.enabled && a.down.triggered);
-    document.getElementById("alertHint").textContent = fired ? "该提醒此前已触发并推送过，保存后将重新监测。" : "";
+    document.getElementById("alertHint").textContent = fired
+      ? "该提醒此前已触发过，保存后将重新监测（同方向只推一次）。"
+      : (pushCfg.key
+          ? "命中后向微信推送一次（no-cors 读不到回执，是否送达请到 Server 酱后台查看）。"
+          : "未填写推送 Key：命中只会在页面内提示，不会发微信。");
     openMask("alertMask");
   }
   function readAlertSide(onId, priceId) {
@@ -1778,6 +2003,11 @@
     toast("已保存价格提醒");
     checkAlerts();                          // 若当前价已触及目标，立即推送
   });
+  document.getElementById("alertPushKey").addEventListener("change", (e) => {
+    pushCfg.key = e.target.value.trim();
+    savePushCfg();
+    toast(pushCfg.key ? "已保存推送 Key（仅本机）" : "已清除推送 Key");
+  });
   document.getElementById("alertClear").addEventListener("click", () => {
     const s = (state.watchlist || []).find(x => x.id === alertStockId);
     if (!s) { closeMask("alertMask"); return; }
@@ -1801,20 +2031,25 @@
       const price = q.price;
       const dec = (s.isHK || isFund(s)) ? 3 : 2;
       const name = s.name || s.code || "股票";
+      // 币种随市场：原实现一律写「元」，港股(HKD)/美股(USD)会误导
+      const unit = s.isUS ? "美元" : (s.isHK ? "港元" : "元");
       const a = s.alert;
       if (a.up && a.up.enabled && !a.up.triggered && price >= a.up.price) {
         a.up.triggered = true; s.updatedAt = Date.now(); changed = true; fired++;
         pushServerChan("【涨超提醒】" + name,
-          "「" + name + "」(" + (s.code || "") + ") 现价 **" + price.toFixed(dec) + "** 已涨超设定的 **" + a.up.price + "** 元，注意关注。");
+          "「" + name + "」(" + (s.code || "") + ") 现价 **" + price.toFixed(dec) + "** 已涨超设定的 **" + a.up.price + "** " + unit + "，注意关注。");
       }
       if (a.down && a.down.enabled && !a.down.triggered && price <= a.down.price) {
         a.down.triggered = true; s.updatedAt = Date.now(); changed = true; fired++;
         pushServerChan("【跌超提醒】" + name,
-          "「" + name + "」(" + (s.code || "") + ") 现价 **" + price.toFixed(dec) + "** 已跌超设定的 **" + a.down.price + "** 元，注意关注。");
+          "「" + name + "」(" + (s.code || "") + ") 现价 **" + price.toFixed(dec) + "** 已跌超设定的 **" + a.down.price + "** " + unit + "，注意关注。");
       }
     }
     if (fired) {
-      toast("已触发 " + fired + " 条价格提醒，微信已推送");
+      // 不再谎报「微信已推送」：no-cors 读不到 Server 酱的回执，Key 失效 / 当日额度用尽都会静默失败
+      toast(pushCfg.key
+        ? ("已触发 " + fired + " 条价格提醒，已发出微信推送（未收到请检查 Key 与当日额度）")
+        : ("已触发 " + fired + " 条价格提醒（未配置推送 Key，未发送微信）"));
       if (changed) { save(); render(); }   // 持久化 triggered（含同步），并刷新按钮状态
     }
   }
@@ -1857,6 +2092,10 @@
 
   // 若已启用同步，页面加载时自动拉取并开始轮询
   updateSyncBanner();
+  // 已设提醒但没填推送 Key 时明确告知，避免用户以为「已设提醒 = 一定会收到微信」
+  if (!pushCfg.key && (state.watchlist || []).some(s => s.alert && ((s.alert.up && s.alert.up.enabled) || (s.alert.down && s.alert.down.enabled)))) {
+    toast("已设置价格提醒但未填写推送 Key：命中只会在页面内提示");
+  }
   if (sync.enabled && sync.token && sync.room) {
     setDot("busy", "同步中…");
     pullSync().then(startSyncPolling);

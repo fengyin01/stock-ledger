@@ -136,6 +136,8 @@
   .sync-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
   .sync-btn.danger { color: #b91c1c; border-color: #fecaca; }
 </style>
+<!-- 已移除第三方埋点（beacon.cdn.qq.com，无 SRI 校验）：该脚本与页面同源执行，可读取
+     localStorage 中的 GitHub 令牌与推送 Key。对个人记账工具而言风险大于收益。 -->
 </head>
 <body>
   <div class="topbar">
@@ -145,7 +147,7 @@
   <div class="wrap">
     <div class="summary-row three-cols">
       <div class="summary-card">
-        <div class="label">年度红利（税后）</div>
+        <div class="label">年度红利（税前）</div>
         <div class="value" id="annualDiv">—</div>
       </div>
       <div class="summary-card">
@@ -190,7 +192,11 @@
 
     <div class="section-title">持仓盈亏 <span class="sub">按当前价与成本计算</span></div>
     <div class="list" id="list"><div class="empty">加载中…</div></div>
-    <div class="note">收益统计仅供参考，未考虑手续费、分红再投入及汇率折算。</div>
+    <div class="note">
+      收益统计仅供参考。<b>年度红利为税前金额</b>（未扣 A 股持股期限差别化个税：持股 1 个月内 20%、1 个月~1 年 10%、1 年以上免征），
+      也未考虑分红再投入；成本按交易记录计算时<b>含手续费</b>，手动填写的成本不含手续费；
+      港股/美股按各自币种数值与人民币直接相加，<b>未做汇率折算</b>。
+    </div>
   </div>
 
   <nav class="bottom-nav">
@@ -441,6 +447,11 @@
     return Number(n).toLocaleString("zh-CN", { minimumFractionDigits: d, maximumFractionDigits: d });
   }
   function fmtMoney(n) { return "¥" + fmt(n, 2); }
+  // 本页此前完全没有转义：name/code 可能来自导入的 JSON 或 Gist 同步内容，
+  // 直接拼进 innerHTML 就是存储型 XSS（可读走 localStorage 里的 GitHub 令牌）。
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
   function cls(n) { return n > 0 ? "up" : (n < 0 ? "down" : ""); }
   function sign(n) { return n > 0 ? "+" : ""; }
 
@@ -489,8 +500,8 @@
       const pnlCls = cls(pnl);
       return `<div class="row">
         <div class="info">
-          <div class="name">${s.name || s.code}</div>
-          <div class="code">${s.code || ""} · 持仓 ${fmt(shares, 0)} · 成本 ${fmt(cost, 3)}</div>
+          <div class="name">${esc(s.name || s.code)}</div>
+          <div class="code">${esc(s.code || "")} · 持仓 ${fmt(shares, 0)} · 成本 ${fmt(cost, 3)}</div>
         </div>
         <div class="right">
           <div class="pnl ${pnlCls}">${sign(pnl)}${fmtMoney(Math.abs(pnl))}</div>

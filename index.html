@@ -429,28 +429,10 @@
     }
   }
 </style>
-<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
-<script>
-(function(){
-  try{
-    var beacon=new BeaconAction({
-      appkey:'0WEB06U85YBSLJNL',
-      versionCode:'1.0.0',
-      channelID:'share',
-      delay:1000,
-      sessionDuration:30*60*1000,
-      isOversea:false,
-      needReportRqdEvent:false
-    });
-    beacon.onDirectUserAction('preview_page_view',{
-      'url':location.href,
-      'referrer':document.referrer,
-      'title':document.title,
-      'sandbox_id':'7d11894bad224f24a3b7f8d2c921d2b8'
-    });
-  }catch(e){}
-})();
-</script></head>
+<!-- 已移除第三方埋点（beacon.cdn.qq.com，无 SRI 校验）：该脚本与页面同源执行，可读取
+     localStorage 中的 GitHub 令牌与推送 Key，并上报 location.href / document.title。
+     对个人记账工具而言风险大于收益，故不再由源码加载。 -->
+</head>
 <body>
 
 <div class="topbar">
@@ -606,7 +588,7 @@
         <label class="chk-row"><input type="checkbox" id="sHK" /><span>港股</span><span class="chk-hint">（价格单位：HKD）</span></label>
         <label class="chk-row"><input type="checkbox" id="sUS" /><span>美股</span><span class="chk-hint">（价格单位：USD）</span></label>
         <label class="chk-row"><input type="checkbox" id="sInFund" /><span>场内基金</span><span class="chk-hint">（ETF / LOF，实时价）</span></label>
-        <label class="chk-row"><input type="checkbox" id="sOutFund" /><span>场外基金</span><span class="chk-hint">（取每日净值）</span></label>
+        <label class="chk-row"><input type="checkbox" id="sOutFund" /><span>场外基金</span><span class="chk-hint">（净值需手动填写）</span></label>
         <label class="chk-row"><input type="checkbox" id="sDivConfirmed" /><span>股息已确认</span><span class="chk-hint">（取消勾选为预估）</span></label>
       </div>
     </div>
@@ -784,13 +766,25 @@
     try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch(e){}
     return { stocks: [], trades: [], deleted: [] };
   }
-  function save() {
+  // 保存策略：原实现每次 save() 都给「所有」股票和「所有」交易记录盖上 now 时间戳，
+  // 于是行情刷新这种只改价格的动作会把自己的旧副本标成最新，多端按 updatedAt 做 LWW
+  // 合并时反而覆盖另一台设备的真实改动，同时每 10~60 秒产生一次 Gist 修订。
+  //   save()                       —— 兼容旧调用：全部打戳并推送
+  //   save({ touch: [rec, ...] })  —— 只给真正改动的记录打戳
+  //   save({ noTouch: true })      —— 一个都不打戳（同步合并、行情刷新、删除）
+  //   save({ skipPush: true })     —— 只落盘，不推 Gist
+  function save(opts) {
+    opts = opts || {};
     const now = Date.now();
-    state.stocks.forEach(s => s.updatedAt = now);
-    state.trades.forEach(t => t.updatedAt = now);
+    if (Array.isArray(opts.touch)) {
+      opts.touch.forEach(r => { if (r) r.updatedAt = now; });
+    } else if (!opts.noTouch) {
+      state.stocks.forEach(s => s.updatedAt = now);
+      state.trades.forEach(t => t.updatedAt = now);
+    }
     if (!Array.isArray(state.deleted)) state.deleted = [];
     localStorage.setItem(KEY, JSON.stringify(state));
-    if (sync.enabled && !suppressPush) pushSync();
+    if (!opts.skipPush && sync.enabled && !suppressPush) pushSync();
   }
 
   // ---------- Trade engine ----------
@@ -960,6 +954,11 @@
     } finally { clearTimeout(to); }
   }
   function nowTime() { return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }); }
+  // 本地日期字符串 YYYY-MM-DD。不要用 toISOString()（UTC）：北京时间 08:00 之前会取到前一天。
+  function todayStr(d) {
+    const t = d || new Date();
+    return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+  }
   async function pushSync() {
     if (!sync.enabled || !sync.token || !sync.room) return;
     suppressPush = true;
@@ -973,7 +972,7 @@
         state.trades = mergeArr(state.trades, r.trades);
         state.deleted = Array.from(new Set([...(state.deleted || []), ...(r.deleted || [])]));
         applyDeleted(state);
-        save();
+        save({ noTouch: true, skipPush: true });
       }
       await gistPushState();
       sync.lastSeen = Date.now();
@@ -999,7 +998,7 @@
         applyDeleted(state);
         sync.lastSeen = Date.now();
         saveSyncCfg();
-        save();
+        save({ noTouch: true, skipPush: true });
         renderAll();
       }
       setDot("on", "已同步 · " + nowTime());
@@ -1193,6 +1192,7 @@
           <div class="card-footer">
             <button data-rec="${s.code || s.id}">☰ 记录</button>
             <button data-trades="${s.code || s.id}">📜 历史</button>
+            <button data-edit-stock="${s.id}">✏️ 编辑</button>
             <button data-matrix="${s.id}">⊞ 决策矩阵</button>
             <button data-refresh-stock="${s.id}">↻ 刷新</button>
             <button class="danger" data-del-stock="${s.id}">🗑 移除</button>
@@ -1330,7 +1330,7 @@
             if (!m) continue;
             let y = null;
             if (typeof it.x === "number") y = new Date(it.x).getFullYear();
-            else if (it.date) y = new Date(String(it.date)).getFullYear();
+            else if (it.date) y = Number(String(it.date).slice(0, 4)) || null;   // 直接取年份，避免 Date 时区偏移
             if (y != null) byYear[y] = (byYear[y] || 0) + parseFloat(m[1]);
           }
         }
@@ -1356,7 +1356,7 @@
         const data = (j.result && j.result.data) || [];
         if (!data.length) return cb({ ok: false });
         const curYear = new Date().getFullYear();
-        const fy = rec => { const d = rec.REPORT_DATE || rec.EX_DIVIDEND_DATE; return d ? new Date(String(d)).getFullYear() : null; };
+        const fy = rec => { const d = rec.REPORT_DATE || rec.EX_DIVIDEND_DATE; const y = d ? Number(String(d).slice(0, 4)) : NaN; return Number.isFinite(y) ? y : null; };
         const byYear = {};
         data.forEach(r => {
           const y = fy(r);
@@ -1380,6 +1380,13 @@
   function fetchQuote(code) {
     code = (code || "").trim();
     if (!/^\d{6}$/.test(code)) return;
+    // 场外基金没有交易所行情：6 位代码直接问腾讯行情会命中同号的股票/可转债，
+    // 把完全无关的价格写进记录（例如 000001 会拿到平安银行、110022 会拿到沪市可转债）。
+    if (getCheck("sOutFund")) {
+      const sh = $("#quoteHint");
+      if (sh) { sh.textContent = "场外基金请手动填写每日净值（本页不抓交易所行情）"; sh.style.color = "var(--primary)"; }
+      return;
+    }
     const mkt = marketOf(code);
     const gvar = "v_" + mkt + code;
     const url = "https://qt.gtimg.cn/q=" + mkt + code;
@@ -1463,6 +1470,8 @@
     return new Promise((resolve) => {
       const code = (stock.code || "").trim();
       if (!/^\d{6}$/.test(code)) return resolve(false);
+      // 场外基金无交易所行情，跳过，避免刷进同号股票/可转债的价格
+      if (stock.fundType === "场外基金") return resolve(false);
       const mkt = marketOf(code);
       const gvar = "v_" + mkt + code;
       const sc = document.createElement("script");
@@ -1519,7 +1528,8 @@
     const old = btn.textContent; btn.disabled = true; btn.textContent = "刷新中…";
     let ok = 0;
     for (const s of list) { if (await fetchQuoteInto(s)) ok++; }
-    save(); renderAll();
+    save({ noTouch: true, skipPush: true });
+    if (!inlineEditing()) renderAll();
     btn.disabled = false; btn.textContent = old;
     toast("已刷新 " + ok + " / " + list.length + " 只");
   }
@@ -1559,7 +1569,9 @@
     if (!list.length) return;
     let ok = 0;
     for (const s of list) { if (await fetchQuoteInto(s)) ok++; }
-    if (ok > 0) { save(); renderAll(); }
+    // 行情只落盘：行情由各端自行拉取，若参与 LWW 合并会互相覆盖真实改动。
+    // 若用户正在手输「持股数量/成本价」，暂不重绘，避免销毁输入框导致失焦。
+    if (ok > 0) { save({ noTouch: true, skipPush: true }); if (!inlineEditing()) renderAll(); }
   }
   function startAutoRefresh() {
     if (autoTimer) clearInterval(autoTimer);
@@ -1605,6 +1617,7 @@
     if (id) {
       const s = state.stocks.find(x=>x.id===id);
       $("#stockTitle").textContent = "编辑股票";
+      $("#stockSave").textContent = "保存修改";
       $("#sName").value=s.name; $("#sCode").value=s.code||""; $("#sSector").value=s.sector||"";
       $("#sPrice").value=s.price??""; $("#sDividend").value=s.dividend??"";
       setCheck("sHK", s.currency === "HKD" || s.sector === "港股");
@@ -1614,7 +1627,8 @@
       setCheck("sDivConfirmed", !!s.dividendConfirmed);
     } else {
       $("#stockTitle").textContent = "添加股票";
-      $$("#stockMask input[type=text], #stockMask input[type=number], #stockMask input[type=search]").forEach(i=>i.value="");
+      $("#stockSave").textContent = "添加股票";
+      $("#stockMask input[type=text], #stockMask input[type=number], #stockMask input[type=search]").forEach(i=>i.value="");
       $("#sSector").value = "";
     }
     openMask("stockMask"); setTimeout(()=>$("#sName").focus(),50);
@@ -1650,9 +1664,10 @@
       price, dividend, yield: yieldVal,
       currency, fundType, dividendConfirmed: getCheck("sDivConfirmed")
     };
-    if (editingStockId) Object.assign(state.stocks.find(x=>x.id===editingStockId), data);
-    else state.stocks.push({ id: uid(), ...data });
-    save(); renderAll(); closeMask("stockMask"); toast("已保存");
+    let rec;
+    if (editingStockId) { rec = state.stocks.find(x=>x.id===editingStockId); if (rec) Object.assign(rec, data); }
+    else { rec = { id: uid(), ...data }; state.stocks.push(rec); }
+    save({ touch: [rec] }); renderAll(); closeMask("stockMask"); toast("已保存");
   };
   function num(v) { return v === "" || v == null ? null : Number(v); }
 
@@ -1669,7 +1684,7 @@
   $$("#tradeDir button").forEach(b => b.onclick = () => setDir(b.dataset.dir));
 
   function openTradeModal(code) {
-    $("#tDate").value = new Date().toISOString().slice(0,10);
+    $("#tDate").value = todayStr();
     $("#tPrice").value=""; $("#tQty").value=""; $("#tFee").value="0"; $("#tNote").value="";
     const target = code ? state.stocks.find(s=>s.code===code) : null;
     if (target) $("#tStock").value = code;
@@ -1706,9 +1721,11 @@
     }
     // 首次记交易时若有手动持仓基线，先补「期初持仓」记录，保持数据一致
     ensureBaseline(code);
-    state.trades.push({ id: uid(), code, name, type: tradeDir, date: $("#tDate").value||new Date().toISOString().slice(0,10), price, qty, fee, note: $("#tNote").value.trim() });
+    const rec = { id: uid(), code, name, type: tradeDir, date: $("#tDate").value || todayStr(), price, qty, fee, note: $("#tNote").value.trim() };
+    state.trades.push(rec);
     syncHolding(code);
-    save(); renderAll(); closeMask("tradeMask"); toast("已记录");
+    save({ touch: [rec, state.stocks.find(x => (x.code || "") === code)] });
+    renderAll(); closeMask("tradeMask"); toast("已记录");
   };
 
   // ---------- 单只股票交易历史 ----------
@@ -1758,13 +1775,15 @@
     const hist = e.target.closest("[data-trades]");
     const mat = e.target.closest("[data-matrix]");
     const ref = e.target.closest("[data-refresh-stock]");
+    const edit = e.target.closest("[data-edit-stock]");
     const sort = e.target.closest("[data-sort]");
     const cat = e.target.closest("[data-cat]");
     const close = e.target.closest("[data-close]");
 
-    if (st) { const s=state.stocks.find(x=>x.id===st.dataset.delStock); if(confirm(`确定移除「${s?s.name:""}」？`)){ if(!Array.isArray(state.deleted)) state.deleted=[]; state.deleted.push(st.dataset.delStock); state.stocks=state.stocks.filter(x=>x.id!==st.dataset.delStock); save(); renderAll(); toast("已移除"); } return; }
-    if (dt) { if(confirm("确定删除这笔交易记录？")){ if(!Array.isArray(state.deleted)) state.deleted=[]; state.deleted.push(dt.dataset.delTrade); state.trades=state.trades.filter(x=>x.id!==dt.dataset.delTrade); if(histCode) syncHolding(histCode); save(); renderAll(); if(histCode) openTradeHist(histCode); toast("已删除"); } return; }
-    if (ref) { const s=state.stocks.find(x=>x.id===ref.dataset.refreshStock); if(s){ const btn=e.target; btn.disabled=true; btn.textContent="…"; fetchQuoteInto(s).then(ok=>{ if(ok){ save(); renderAll(); toast(`已刷新 ${s.name}`); } else { toast("刷新失败"); renderAll(); } }); } return; }
+    if (st) { const s=state.stocks.find(x=>x.id===st.dataset.delStock); if(confirm(`确定移除「${s?s.name:""}」？`)){ if(!Array.isArray(state.deleted)) state.deleted=[]; state.deleted.push(st.dataset.delStock); state.stocks=state.stocks.filter(x=>x.id!==st.dataset.delStock); save({ noTouch: true }); renderAll(); toast("已移除"); } return; }
+    if (dt) { if(confirm("确定删除这笔交易记录？")){ if(!Array.isArray(state.deleted)) state.deleted=[]; state.deleted.push(dt.dataset.delTrade); state.trades=state.trades.filter(x=>x.id!==dt.dataset.delTrade); if(histCode) syncHolding(histCode); save({ touch: [state.stocks.find(x=>(x.code||"")===histCode)] }); renderAll(); if(histCode) openTradeHist(histCode); toast("已删除"); } return; }
+    if (ref) { const s=state.stocks.find(x=>x.id===ref.dataset.refreshStock); if(s){ const btn=e.target; btn.disabled=true; btn.textContent="…"; fetchQuoteInto(s).then(ok=>{ if(ok){ save({ noTouch: true, skipPush: true }); renderAll(); toast(`已刷新 ${s.name}`); } else { toast("刷新失败"); renderAll(); } }); } return; }
+    if (edit) { openStockModal(edit.dataset.editStock); return; }
     if (rec) { openTradeModal(rec.dataset.rec); return; }
     if (hist) { openTradeHist(hist.dataset.trades); return; }
     if (mat) { location.href = "matrix.html?id=" + encodeURIComponent(mat.dataset.matrix); return; }
@@ -1775,15 +1794,31 @@
   });
 
   // Inline inputs on cards
+  // 原实现每敲一个字符就 save() + renderWatch()：renderWatch() 会重写整个列表的 innerHTML，
+  // 正在输入的 <input> 被销毁 → 焦点丢失（实际只能输入一位数字），且每个字符都写一次 Gist。
+  // 改为：输入时只更新数据并落盘（不打戳不推送）；数值确定（change）后再重绘 + 推送一次。
+  function inlineEditing() {
+    const a = document.activeElement;
+    return !!(a && a.dataset && (a.dataset.shares || a.dataset.cost));
+  }
+  let inlinePushTimer = null;
   document.addEventListener("input", e => {
-    if (e.target.dataset.shares) {
-      const s = state.stocks.find(x=>x.id===e.target.dataset.shares);
-      if (s) { s.shares = e.target.value===""?null:Number(e.target.value); save(); renderWatch(); }
-    }
-    if (e.target.dataset.cost) {
-      const s = state.stocks.find(x=>x.id===e.target.dataset.cost);
-      if (s) { s.cost = e.target.value===""?null:Number(e.target.value); save(); renderWatch(); }
-    }
+    const id = e.target.dataset.shares || e.target.dataset.cost;
+    if (!id) return;
+    const s = state.stocks.find(x => x.id === id);
+    if (!s) return;
+    const val = e.target.value === "" ? null : Number(e.target.value);
+    if (e.target.dataset.shares) s.shares = val; else s.cost = val;
+    save({ touch: [s], skipPush: true });
+    // 停止输入 1.2 秒后补一次推送，保证改动最终会同步到其它设备
+    clearTimeout(inlinePushTimer);
+    inlinePushTimer = setTimeout(() => { if (sync.enabled && !suppressPush) pushSync(); }, 1200);
+  });
+  document.addEventListener("change", e => {
+    const id = e.target.dataset.shares || e.target.dataset.cost;
+    if (!id) return;
+    renderWatch();
+    if (sync.enabled && !suppressPush) pushSync();
   });
 
   // Nav
@@ -1868,7 +1903,7 @@
   $("#btnExport").onclick = () => {
     const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
     const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
-    a.download = "股票记账_" + new Date().toISOString().slice(0,10) + ".json"; a.click(); URL.revokeObjectURL(a.href); toast("已导出");
+    a.download = "股票记账_" + todayStr() + ".json"; a.click(); URL.revokeObjectURL(a.href); toast("已导出");
   };
   $("#btnImport").onclick = () => $("#fileImport").click();
   $("#fileImport").onchange = e => {
@@ -1944,6 +1979,12 @@
   }
   renderSyncBtn();
 
+  // 回到前台 / 网络恢复时补一次同步。
+  // 这两行原先写在 IIFE 之外，而 sync / pullSync 都是 IIFE 内的 const ——
+  // 回调真正触发时会抛 ReferenceError，等于从未生效（其它页面写在顶层作用域，一直是好的）。
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && sync.enabled && sync.token && sync.room) pullSync(); });
+  window.addEventListener("online", () => { if (sync.enabled && sync.token && sync.room) pullSync(); });
+
   updateMarketStatus();
   setInterval(updateMarketStatus, 60000);
   loadRefreshSetting();
@@ -1952,9 +1993,6 @@
 
   switchView("watch");
 })();
-
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && sync.enabled && sync.token && sync.room) pullSync(); });
-  window.addEventListener("online", () => { if (sync.enabled && sync.token && sync.room) pullSync(); });
 </script>
 <nav class="bottom-nav">
   <a href="index.html" class="active">

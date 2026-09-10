@@ -1,5 +1,5 @@
-// 股票记账 · 多端实时同步后端（零依赖 Node.js）
-// 同时托管前端静态文件与 /api/<room>/sync 同步接口。
+// 股票记账 · 静态托管 + 分红预测数据代理（零依赖 Node.js）
+// 前端的多端同步已改为 GitHub Gist（每台设备各自持有 PAT），本服务不再承担同步职责。
 // 运行： node server.js   （PORT 环境变量可改，默认 3000）
 // 部署： 推到 Render / Railway / Fly.io 等任意 Node 平台即可获得公网地址。
 
@@ -10,42 +10,6 @@ const path = require("path");
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, ".sync-data");
-const DATA_FILE = path.join(DATA_DIR, "rooms.json");
-
-// ---------- 房间数据持久化 ----------
-function loadRooms() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, "utf8")); } catch (e) { return {}; }
-}
-let rooms = loadRooms();
-let saveTimer = null;
-function persist() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(DATA_FILE, JSON.stringify(rooms));
-    } catch (e) { console.error("persist error:", e.message); }
-  }, 300);
-}
-
-// ---------- LWW 合并（按 id，updatedAt 大者胜）----------
-function mergeArr(a, b) {
-  const m = new Map();
-  (a || []).forEach(r => m.set(r.id, r));
-  (b || []).forEach(r => {
-    const cur = m.get(r.id);
-    const rt = r.updatedAt || 0;
-    const ct = cur ? (cur.updatedAt || 0) : -1;
-    if (!cur || rt > ct) m.set(r.id, r);
-  });
-  return Array.from(m.values());
-}
-function mergeRoom(room, incoming) {
-  const deleted = Array.from(new Set([...(room.deleted || []), ...(incoming.deleted || [])]));
-  const stocks = mergeArr(room.stocks, incoming.stocks).filter(r => !deleted.includes(r.id));
-  const trades = mergeArr(room.trades, incoming.trades).filter(r => !deleted.includes(r.id));
-  return { stocks, trades, deleted };
-}
 
 // ---------- 工具 ----------
 const MIME = {
@@ -68,11 +32,39 @@ function sendJSON(res, code, obj) {
   res.end(body);
 }
 
+// ---------- 静态文件白名单 ----------
+// 原实现把整个目录都托管出去，/server.js、/worker.js、/package.json、/render.yaml、
+// /schema.sql、/fetch_*.js 都能被任意下载（实测线上确实能下到），等于把部署细节公开。
+// 这里只放行前端真正需要的文件，其余一律 404（不用 403，避免暴露文件是否存在）。
+const PUBLIC_EXT = new Set([".html", ".js", ".css", ".json", ".png", ".svg", ".ico"]);
+const BLOCKED_FILES = new Set([
+  "server.js", "worker.js", "package.json", "package-lock.json",
+  "wrangler.toml", "render.yaml", "schema.sql"
+]);
+const BLOCKED_PREFIX = ["fetch_", "check_"];
+function isPublicFile(rel) {
+  if (!rel || rel.startsWith("..")) return false;
+  const parts = rel.split("/");
+  if (parts.length !== 1) return false;                       // 只托管根目录下的前端文件
+  if (parts[0].startsWith(".")) return false;                 // .git / .github / .gitignore / .sync-data
+  const name = parts[0].toLowerCase();
+  if (BLOCKED_FILES.has(name)) return false;
+  if (BLOCKED_PREFIX.some(p => name.startsWith(p))) return false;
+  return PUBLIC_EXT.has(path.extname(name));
+}
+
 // ---------- 分红预测数据代理 ----------
-// 上游 API（慢慢变富后端）存在 CORS 白名单，仅放行 www.manmanbianfu.top；
-// 本服务端转发时伪造该 Origin，前端以同源 /api/div/stockPrice 访问即可。
-const DIV_API = "https://vercel-dividend-d8faqegf03442b6c.service.tcloudbase.com/stockPrice";
+// 上游是第三方接口，只放行白名单 action，避免本服务被当成任意 URL 的开放代理。
+// 注意：上游存在 CORS 白名单（只放行它自己的站点），因此转发时带了上游期望的 Origin；
+// 若你日后迁到自己的数据源，请用环境变量 DIV_API 覆盖，并去掉下面这两个头部。
+const DIV_API = process.env.DIV_API || "https://vercel-dividend-d8faqegf03442b6c.service.tcloudbase.com/stockPrice";
+const DIV_ACTIONS = new Set(["", "forecastData", "dividendPayout", "dividendHistory", "dividendCommitmentSummary", "search"]);
 function proxyDiv(req, res, url) {
+  const action = url.searchParams.get("action") || "";
+  if (!DIV_ACTIONS.has(action)) {
+    sendJSON(res, 400, { error: "unsupported action" });
+    return;
+  }
   const target = DIV_API + (url.search || "");
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 25000) : null;
@@ -129,6 +121,13 @@ const server = http.createServer((req, res) => {
 
   const url = new URL(req.url, "http://localhost");
 
+  // 旧版「房间号同步」接口：已下线，保留显式提示方便老版本前端与书签自查。
+  // 原实现无任何鉴权、CORS 全开、room id 就是唯一凭据 —— 知道房间号即可读写别人的账本。
+  if (/^\/api\/[^/]+\/sync$/.test(url.pathname)) {
+    sendJSON(res, 410, { error: "gone", hint: "旧房间号同步已下线，请改用 GitHub Gist 同步（在页面「同步」弹窗中配置）" });
+    return;
+  }
+
   // 分红预测数据代理（GET）
   if (req.method === "GET" && url.pathname === "/api/div/stockPrice") {
     proxyDiv(req, res, url);
@@ -148,51 +147,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const m = url.pathname.match(/^\/api\/([^/]+)\/sync$/);
-  if (m) {
-    const roomId = decodeURIComponent(m[1]);
-    if (!rooms[roomId]) rooms[roomId] = { updatedAt: 0, stocks: [], trades: [], deleted: [] };
-    const room = rooms[roomId];
-
-    if (req.method === "GET") {
-      sendJSON(res, 200, { updatedAt: room.updatedAt, state: { stocks: room.stocks, trades: room.trades, deleted: room.deleted } });
-      return;
-    }
-    if (req.method === "POST") {
-      let body = "";
-      req.on("data", d => body += d);
-      req.on("end", () => {
-        try {
-          const data = JSON.parse(body || "{}");
-          const incoming = data.state || {};
-          const merged = mergeRoom({ stocks: room.stocks, trades: room.trades, deleted: room.deleted }, incoming);
-          room.stocks = merged.stocks;
-          room.trades = merged.trades;
-          room.deleted = merged.deleted;
-          room.updatedAt = Date.now();
-          persist();
-          sendJSON(res, 200, { updatedAt: room.updatedAt, state: { stocks: room.stocks, trades: room.trades, deleted: room.deleted } });
-        } catch (e) {
-          sendJSON(res, 400, { error: "bad json" });
-        }
-      });
-      return;
-    }
-    sendJSON(res, 405, { error: "method not allowed" });
-    return;
-  }
-
   // 已下线页面显式 404（沙箱增量部署不清理远端旧文件）
   if (url.pathname === "/sectors.html") {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Not found"); return;
   }
 
-  // 静态文件托管
-  let p = url.pathname === "/" ? "/index.html" : url.pathname;
-  const filePath = path.normalize(path.join(ROOT, p));
-  if (!filePath.startsWith(ROOT) || filePath.includes(".sync-data")) {
-    res.writeHead(403); res.end("forbidden"); return;
+  // 静态文件托管（仅白名单内的前端资源）
+  const p = url.pathname === "/" ? "/index.html" : url.pathname;
+  const filePath = path.normalize(path.join(ROOT, decodeURIComponent(p)));
+  const rel = path.relative(ROOT, filePath).replace(/\\/g, "/");
+  if (!filePath.startsWith(ROOT) || !isPublicFile(rel)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Not found"); return;
   }
   fs.readFile(filePath, (err, data) => {
     if (err) {
@@ -206,5 +173,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log("股票记账同步服务已启动: http://localhost:" + PORT);
+  console.log("股票记账（静态托管 + 分红代理）已启动: http://localhost:" + PORT);
 });

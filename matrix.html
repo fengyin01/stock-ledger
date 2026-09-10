@@ -160,6 +160,8 @@
     .bottom-nav svg { width: 20px; height: 20px; }
   }
 </style>
+<!-- 已移除第三方埋点（beacon.cdn.qq.com，未做 SRI 校验）。该脚本与页面同源执行，
+     可读取 localStorage 中的 GitHub 令牌与推送 Key，并上报 location.href / document.title。 -->
 </head>
 <body>
   <div class="topbar">
@@ -255,6 +257,7 @@
   const KEY = "mmbf_stock_ledger_v2";
   const qs = new URLSearchParams(location.search);
   const stockId = qs.get("id");
+  const qsCode = qs.get("code");
 
   function loadState() {
     try { return JSON.parse(localStorage.getItem(KEY)) || { stocks: [], trades: [] }; }
@@ -272,19 +275,35 @@
     return "sz";
   }
   function isFundStock(s) {
-    return !!(s && (s.fundType === "场内基金" || s.fundType === "场外基金" || /^(ETF|LOF|基金)$/.test(s.sector||"")));
+    return !!(s && (s.fundType === "场内基金" || s.fundType === "场外基金" ||
+      /^(ETF|LOF|基金)$/.test(s.sector||"") || /ETF|LOF/i.test(s.name||"")));
   }
 
   const state = loadState();
-  let stock = state.stocks.find(x => x.id === stockId);
-  if (!stock) {
-    // 兜底：支持通过 URL 参数直接打开分享链接（如 manmanbianfu.top/matrix?code=..&name=..&dividend=..&price=..）
-    const code = qs.get("code"), name = qs.get("name");
-    const priceP = qs.get("price"), divP = qs.get("dividend");
-    if (code && name) {
+  const stocksArr = Array.isArray(state.stocks) ? state.stocks : [];
+  const urlNum = k => { const v = Number(qs.get(k)); return isFinite(v) && v > 0 ? v : null; };
+
+  // 解析顺序：id → code → URL 兜底。
+  // 旧实现只按 id 查，而自选页链接只带 code，于是永远落到兜底分支，
+  // shares/cost/fundType/sector 全部丢失（模拟加仓永远显示「无持仓」、ETF 被按股票口径处理）。
+  let stock = stocksArr.find(x => x.id && x.id === stockId);
+  if (!stock && qsCode) stock = stocksArr.find(x => String(x.code || "").trim() === String(qsCode).trim());
+  if (stock) {
+    // 自选页传来的实时价/红利优先（比存储值新）；持股/成本/基金类型仍取本机账本
+    stock = Object.assign({}, stock);
+    const liveP = urlNum("price"), liveD = urlNum("dividend");
+    if (liveP != null) stock.price = liveP;
+    if (liveD != null) stock.dividend = liveD;
+    if (qs.get("fundType")) stock.fundType = qs.get("fundType");
+    if (!stock.sector && qs.get("sector")) stock.sector = qs.get("sector");
+  } else {
+    // 兜底：支持通过 URL 参数直接打开分享链接（matrix.html?code=..&name=..&dividend=..&price=..）
+    const name = qs.get("name");
+    if (qsCode && name) {
       stock = {
-        id: "url", name, code,
-        price: Number(priceP) || 0, dividend: Number(divP) || 0,
+        id: "url", name, code: qsCode,
+        price: urlNum("price") || 0, dividend: urlNum("dividend") || 0,
+        sector: qs.get("sector") || "", fundType: qs.get("fundType") || "",
         isHK: qs.get("isHK") === "true", isUS: qs.get("isUS") === "true"
       };
     }
@@ -294,41 +313,74 @@
     throw new Error("stock not found");
   }
 
-  const price = Number(stock.price) || 0;
+  let price = Number(stock.price) || 0;
   const dividend = Number(stock.dividend) || 0;
   const cost = Number(stock.cost) || 0;
   const shares = Number(stock.shares) || 0;
-  const curYield = price > 0 ? dividend / price * 100 : 0;
+  let curYield = price > 0 ? dividend / price * 100 : 0;
   const costYield = cost > 0 ? dividend / cost * 100 : 0;
+  // 币种随市场：原页面一律硬编码 ¥，港股(HKD)/美股(USD) 会被当成人民币
+  const CUR = stock.isUS ? "$" : (stock.isHK ? "HK$" : "¥");
+  let priceAsOf = "";   // 现价对应的交易日（来自 K 线），用于标注数据新鲜度
 
-  // 模拟加仓副标题：按是否已有持仓动态显示
-  document.getElementById("simSub").textContent =
-    (shares > 0 && cost > 0)
-      ? "在现有持仓上，从现价起逐档加仓，推演摊薄成本"
-      : "当前无持仓，从现价起逐档建仓，推演摊薄成本";
+  function refreshDerived() { curYield = price > 0 ? dividend / price * 100 : 0; }
 
-  document.getElementById("pageTitle").textContent = stock.name + " 决策矩阵";
-  document.getElementById("pageSub").textContent = "代码 " + (stock.code||"") + " · 每股红利 ¥" + fmt(dividend,3);
-
-  document.getElementById("quickStats").innerHTML = `
-    <div class="stat"><div class="num">¥${fmt(price, isFundStock(stock)?3:2)}</div><div class="label">当前价格</div></div>
-    <div class="stat"><div class="num ${curYield>=5?'up':''}">${fmt(curYield,2)}%</div><div class="label">当前股息率</div></div>
-    <div class="stat"><div class="num">¥${fmt(dividend,3)}</div><div class="label">每股红利</div></div>
-  `;
+  function renderStats() {
+    // 模拟加仓副标题：按是否已有持仓动态显示
+    document.getElementById("simSub").textContent =
+      (shares > 0 && cost > 0)
+        ? "在现有持仓上，从现价起逐档加仓，推演摊薄成本"
+        : "当前无持仓，从现价起逐档建仓，推演摊薄成本";
+    document.getElementById("pageTitle").textContent = stock.name + " 决策矩阵";
+    document.getElementById("pageSub").textContent = "代码 " + (stock.code||"") + " · 每股红利 " + CUR + fmt(dividend,3);
+    document.getElementById("quickStats").innerHTML = `
+      <div class="stat"><div class="num">${CUR}${fmt(price, isFundStock(stock)?3:2)}</div><div class="label">最新价${priceAsOf ? " · " + priceAsOf : ""}</div></div>
+      <div class="stat"><div class="num ${curYield>=5?'up':''}">${fmt(curYield,2)}%</div><div class="label">当前股息率</div></div>
+      <div class="stat"><div class="num">${CUR}${fmt(dividend,3)}</div><div class="label">每股红利</div></div>
+    `;
+  }
 
   // ---------- BOLL ----------
   // 腾讯前复权 K 线（CORS 可用）：Data 格式 data.{code}.qfqday/qfqweek/qfqmonth = [[date,open,close,high,low,volume],...]
+  // 市场前缀与接口按市场区分（实测）：A股 fqkline + sh/sz/bj；港股必须用 hkfqkline + hk00700。
+  // 旧实现一律 `marketOf(code)==='sh' ? 'sh' : 'sz'`，港股 00700 会去请求 sz00700，恒为空 →
+  // 整个 BOLL 卡片显示「数据不足」；北交所也被错判成深市。
+  function klineCode(s) {
+    const c = String((s && s.code) || "").trim();
+    if (!c) return "";
+    if (s.isHK) return "hk" + c.replace(/^0+/, "").padStart(5, "0");
+    if (s.isUS) return "us" + c.toUpperCase();
+    return marketOf(c) + (/^\d+$/.test(c) ? c.padStart(6, "0") : c);
+  }
+  function klineUrl(period) {
+    const code = klineCode(stock);
+    if (stock.isHK) return `https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=${code},${period},,,320,qfq`;
+    if (stock.isUS) return `https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=${code},${period},,,320,qfq`;
+    return `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},2020-01-01,2035-12-31,640,qfq`;  // 结束日期写远，避免窗口过期
+  }
   const bollCache = {};
   async function fetchKline(mode) {
-    const mkt = marketOf(stock.code) === "sh" ? "sh" : "sz";
-    const code = mkt + stock.code;
     const period = mode === "day" ? "day" : (mode === "month" ? "month" : "week");
+    const code = klineCode(stock);
     const field = "qfq" + period;
-    const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},2020-01-01,2026-12-31,640,qfq`;
-    const r = await fetch(url);
+    const r = await fetch(klineUrl(period));
     const j = await r.json();
     const list = (j.data && j.data[code] && j.data[code][field]) || [];
     return list.map(item => ({ date: item[0], close: +item[2] }));
+  }
+  // 用 K 线最新收盘价校正「现价」：原实现只读 localStorage / URL 快照，
+  // 页面打开后永不更新，BOLL 位置、距中轨、股息率与全部买入价都可能基于隔夜价。
+  async function syncPriceFromKline() {
+    try {
+      const res = await ensureBoll("day");    // 复用 BOLL 缓存，避免重复请求
+      const last = (res.data || [])[(res.data || []).length - 1];
+      const c = last && Number(last.close);
+      if (isFinite(c) && c > 0) {
+        price = c;
+        priceAsOf = last.date || "";
+        refreshDerived();
+      }
+    } catch (e) {}
   }
   async function ensureBoll(mode) {
     if (bollCache[mode]) return bollCache[mode];
@@ -385,12 +437,12 @@
     document.getElementById("bollTitle").textContent = titleMap[mode] || "周 BOLL";
     const box = document.getElementById("bollBox");
     // 保持骨架可见，避免闪烁
-    document.getElementById("bollMarkerLabel").textContent = `现价 ¥${fmt(price, isFundStock(stock)?3:2)}`;
+    document.getElementById("bollMarkerLabel").textContent = `现价 ${CUR}${fmt(price, isFundStock(stock)?3:2)}`;
     try {
       const { b, lastDate } = await ensureBoll(mode);
       document.getElementById("bollSub").textContent = `前复权 · ${lastDate}`;
       if (!b || !price || !isFinite(b.upper) || !isFinite(b.middle) || !isFinite(b.lower)) {
-        box.innerHTML = '<div class="empty">数据不足或暂无法获取 BOLL</div>'; return;
+        box.innerHTML = '<div class="empty">K 线数据不足或该市场暂无数据（下方买入价网格不受影响）</div>'; return;
       }
       const width = b.upper - b.lower;
       const pct = width > 0 ? Math.max(0, Math.min(100, (price - b.lower) / width * 100)) : 50;
@@ -398,9 +450,9 @@
       const yieldOf = p => p > 0 ? dividend / p * 100 : 0;
       const priceD = isFundStock(stock) ? 3 : 2;
       document.getElementById("bollDot").style.left = pct + "%";
-      document.getElementById("tickLower").innerHTML = `¥${fmt(b.lower, priceD)}<div class="tick-label">下轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.lower),2)}%</div>`;
-      document.getElementById("tickMid").innerHTML = `¥${fmt(b.middle, priceD)}<div class="tick-label">中轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.middle),2)}%</div>`;
-      document.getElementById("tickUpper").innerHTML = `¥${fmt(b.upper, priceD)}<div class="tick-label">上轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.upper),2)}%</div>`;
+      document.getElementById("tickLower").innerHTML = `${CUR}${fmt(b.lower, priceD)}<div class="tick-label">下轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.lower),2)}%</div>`;
+      document.getElementById("tickMid").innerHTML = `${CUR}${fmt(b.middle, priceD)}<div class="tick-label">中轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.middle),2)}%</div>`;
+      document.getElementById("tickUpper").innerHTML = `${CUR}${fmt(b.upper, priceD)}<div class="tick-label">上轨</div><div class="tick-yield">股息率 ${fmt(yieldOf(b.upper),2)}%</div>`;
       document.getElementById("bollZone").textContent = bollZone(price, b);
       const distEl = document.getElementById("bollDist");
       distEl.textContent = `距中轨 ${distMid >= 0 ? '+' : ''}${fmt(distMid, 2)}%`;
@@ -416,8 +468,6 @@
       renderBoll(e.target.dataset.boll);
     }
   });
-  renderBoll("week");
-  updatePositions();
 
   // ---------- Yield matrix ----------
   const yields = [3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.0];
@@ -433,13 +483,12 @@
       html += `
         <div class="matrix-cell ${current?'current':''}">
           <div class="h">${y.toFixed(1)}%</div>
-          <div class="p">¥${fmt(tp, isFundStock(stock)?3:2)}</div>
+          <div class="p">${CUR}${fmt(tp, isFundStock(stock)?3:2)}</div>
           <div class="pct">${pctTxt}</div>
         </div>`;
     });
     box.innerHTML = html;
   }
-  renderMatrix();
 
   // ---------- Simulated adding positions ----------
   let simStep = 0.5;
@@ -518,10 +567,10 @@
         : `<input type="number" step="100" value="${r.shares}" data-yield="${r.yield}" style="width:64px;padding:5px;border:1px solid var(--border);border-radius:6px;text-align:center;font-family:var(--font);font-size:13px">`;
       return `<tr>
         <td>${fmt(r.yield,2)}% ${r.isBase?'<span style="font-size:11px;color:var(--text-3)">(成本)</span>':''}</td>
-        <td>¥${fmt(r.price, isFundStock(stock)?3:2)}</td>
-        <td>${sharesCell}${!r.isBase ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">¥${fmt(trancheAmount,2)}</div>` : ''}</td>
-        <td>${fmt(r.cumShares,0)}<div style="font-size:11px;color:var(--text-3);margin-top:2px">¥${fmt(r.cumCost,2)}</div></td>
-        <td>¥${fmt(r.avgCost, isFundStock(stock)?3:2)}</td>
+        <td>${CUR}${fmt(r.price, isFundStock(stock)?3:2)}</td>
+        <td>${sharesCell}${!r.isBase ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">${CUR}${fmt(trancheAmount,2)}</div>` : ''}</td>
+        <td>${fmt(r.cumShares,0)}<div style="font-size:11px;color:var(--text-3);margin-top:2px">${CUR}${fmt(r.cumCost,2)}</div></td>
+        <td>${CUR}${fmt(r.avgCost, isFundStock(stock)?3:2)}</td>
         <td>${chgHtml}</td>
       </tr>`;
     }).join("");
@@ -554,11 +603,10 @@
     }
   });
   renderStepPills();
-  renderExtraChips();
-  renderSim();
 
   // ---------- Historical dividends ----------
-  function yearOfDate(d) { return d ? new Date(String(d)).getFullYear() : null; }
+  // 直接截取年份：'YYYY-MM-DD' 交给 new Date() 会按 UTC 解析，负时区下年份可能差一年
+  function yearOfDate(d) { const y = d ? Number(String(d).slice(0, 4)) : NaN; return Number.isFinite(y) ? y : null; }
   async function fetchStockDivByYear() {
     const url = `https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_SHAREBONUS_DET&columns=ALL&filter=(SECURITY_CODE="${stock.code}")&pageSize=500&pageNumber=1&sortColumns=REPORT_DATE&sortTypes=-1&source=WEB&client=WEB`;
     const r = await fetch(url);
@@ -589,7 +637,7 @@
               if (!m) continue;
               let y = null;
               if (typeof it.x === "number") y = new Date(it.x).getFullYear();
-              else if (it.date) y = new Date(String(it.date)).getFullYear();
+              else if (it.date) y = Number(String(it.date).slice(0, 4)) || null;   // 直接取年份，避免 Date 时区偏移
               if (y != null) byYear[y] = (byYear[y] || 0) + parseFloat(m[1]);
             }
           }
@@ -605,10 +653,17 @@
     const body = document.getElementById("historyBody");
     let byYear = {};
     try {
-      byYear = isFundStock(stock) ? await fetchFundDivByYear() : await fetchStockDivByYear();
+      // A 股走分红方案表；ETF/LOF 走基金历史分红；港美股该表为 A 股口径，直接跳过而不是给空结论
+      if (isFundStock(stock)) byYear = await fetchFundDivByYear();
+      else if (!stock.isHK && !stock.isUS) byYear = await fetchStockDivByYear();
     } catch(e) { byYear = {}; }
     const years = Object.keys(byYear).map(Number).sort((a,b)=>b-a);
-    if (!years.length) { body.innerHTML = '<div class="empty">暂无历史分红数据</div>'; return; }
+    if (!years.length) {
+      body.innerHTML = '<div class="empty">' + ((stock.isHK || stock.isUS)
+        ? '港美股历史分红暂未接入，请手动填写每股红利'
+        : '暂无历史分红数据（也可能是接口获取失败）') + '</div>';
+      return;
+    }
     // continuous years
     const curYear = new Date().getFullYear();
     let continuous = 0, y = curYear;
@@ -617,12 +672,13 @@
       y = years[0];
       while (byYear[y] > 0) { continuous++; y--; }
     }
-    // 5-year avg
-    const last5 = years.filter(y => y >= curYear - 4);
-    const avg5 = last5.length ? last5.reduce((a,y)=>a+byYear[y],0) / last5.length : 0;
+    // 近5年均：只取「已完整结束」的年度。
+    // 原实现取 y >= curYear-4，会把当年不完整的中期分红当成整年计入分母，系统性低估平均派息。
+    const fullYears = years.filter(y => y < curYear).slice(0, 5);
+    const avg5 = fullYears.length ? fullYears.reduce((a,y)=>a+byYear[y],0) / fullYears.length : 0;
     head.innerHTML = `
       <div class="hi"><div class="big">${continuous}</div><div class="small">连续派息年数</div></div>
-      <div class="hi"><div class="big">¥${fmt(avg5,3)}</div><div class="small">近5年均每股派息</div></div>
+      <div class="hi"><div class="big">${CUR}${fmt(avg5,3)}</div><div class="small">近${fullYears.length || 5}年均每股派息</div></div>
     `;
     body.innerHTML = years.map((y, i) => {
       const v = byYear[y];
@@ -632,10 +688,21 @@
         const pct = (v - prev) / prev * 100;
         chg = `<span class="chg ${pct>=0?'txt-up':'txt-down'}">${sign(pct)}${fmt(pct,1)}%</span>`;
       }
-      return `<div class="year-row"><span class="y">${y}</span><span class="v">¥${fmt(v,3)}</span>${chg}</div>`;
+      return `<div class="year-row"><span class="y">${y}</span><span class="v">${CUR}${fmt(v,3)}</span>${chg}</div>`;
     }).join("");
   }
-  renderHistory();
+
+  // ---------- 启动：先用 K 线最新收盘价校正现价，再统一渲染 ----------
+  (async function boot() {
+    await syncPriceFromKline();
+    renderStats();
+    renderMatrix();
+    renderExtraChips();   // 加档选项依赖现价股息率，必须在校正现价之后再渲染
+    renderSim();
+    renderHistory();
+    renderBoll("week");
+    updatePositions();
+  })();
 </script>
 <nav class="bottom-nav">
   <a href="index.html">
