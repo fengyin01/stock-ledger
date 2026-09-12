@@ -9,19 +9,19 @@
 <title>决策矩阵</title>
 <style>
   :root {
-    --primary: #E03025;
-    --primary-soft: #fff0f0;
-    --up: #E03025;
-    --down: #16a34a;
-    --bg: #FAF8F0;
-    --card: #ffffff;
-    --border: #e5e7eb;
-    --text: #1f2937;
-    --text-2: #6b7280;
-    --text-3: #9ca3af;
+    --primary: #B3261E;
+    --primary-soft: #F5E7E2;
+    --up: #B3261E;
+    --down: #2E7D5B;
+    --bg: #FAF7F0;
+    --card: #FCFAF3;
+    --border: #DCD4C4;
+    --text: #1A1A1A;
+    --text-2: #5C5647;
+    --text-3: #8A8272;
     --radius: 12px;
     --radius-lg: 16px;
-    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(26,26,26,.08);
     --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,7 @@
   .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px 56px; padding: 0 16px calc(56px + env(safe-area-inset-bottom)); }
   .topbar {
     position: sticky; top: 0; z-index: 30;
-    background: rgba(255,255,255,.92); backdrop-filter: saturate(180%) blur(10px);
+    background: rgba(250,247,240,.94); backdrop-filter: saturate(180%) blur(10px);
     border-bottom: 1px solid var(--border);
   }
   .topbar-inner {
@@ -44,7 +44,7 @@
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-    box-shadow: var(--shadow); padding: 16px; margin-top: 12px;
+    box-shadow: none; padding: 16px; margin-top: 12px;
   }
   .section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .section-title .sub { font-size: 12px; color: var(--text-3); font-weight: 400; }
@@ -61,12 +61,12 @@
   .boll-title-block { flex: 1; }
   .boll-title { font-size: 16px; font-weight: 800; color: var(--text); }
   .boll-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-  .boll-tabs { display: inline-flex; gap: 2px; background: #f0ebe0; padding: 3px; border-radius: 20px; flex-shrink: 0; }
+  .boll-tabs { display: inline-flex; gap: 2px; background: #f0ebe0; padding: 3px; border-radius: 3px; flex-shrink: 0; }
   .boll-tabs button {
     border: none; background: transparent; color: var(--text-2); font-size: 13px; padding: 5px 16px;
-    border-radius: 18px; cursor: pointer; font-family: var(--font);
+    border-radius: 3px; cursor: pointer; font-family: var(--font);
   }
-  .boll-tabs button.active { background: #fff; color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+  .boll-tabs button.active { background: #FCFAF3; color: var(--text); box-shadow: none; font-weight: 600; }
   .boll-positions { display: flex; justify-content: center; gap: 24px; margin: 14px 0 10px; font-size: 13px; color: var(--text-3); }
   .boll-positions span { display: flex; align-items: center; gap: 3px; }
   .boll-positions span em { font-style: normal; font-weight: 600; }
@@ -74,10 +74,10 @@
   .boll-positions span.active em { color: var(--down); }
   .boll-track-wrap { position: relative; margin-top: 26px; margin-bottom: 56px; }
   .boll-marker-label { position: absolute; left: 50%; transform: translateX(-50%); top: -24px; color: var(--up); font-size: 13px; font-weight: 700; white-space: nowrap; }
-  .boll-track { position: relative; height: 8px; border-radius: 4px; overflow: visible; }
-  .boll-track-lower { position: absolute; left: 0; right: 50%; top: 0; bottom: 0; background: linear-gradient(90deg, #baf7d0, #e6f9ee); border-radius: 4px 0 0 4px; }
+  .boll-track { position: relative; height: 8px; border-radius: 3px; overflow: visible; }
+  .boll-track-lower { position: absolute; left: 0; right: 50%; top: 0; bottom: 0; background: linear-gradient(90deg, #baf7d0, #e6f9ee); border-radius: 3px 0 0 4px; }
   .boll-track-upper { position: absolute; left: 50%; right: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffe6e4, #ffd5d2); border-radius: 0 4px 4px 0; }
-  .boll-dot { position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--primary); transform: translate(-50%, -50%); box-shadow: 0 2px 5px rgba(0,0,0,.18); z-index: 2; }
+  .boll-dot { position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; background: #FCFAF3; border: 4px solid var(--primary); transform: translate(-50%, -50%); box-shadow: none; z-index: 2; }
   .boll-tick { position: absolute; top: 18px; font-size: 12px; color: var(--text); font-weight: 700; line-height: 1.35; }
   .boll-tick .tick-label { font-size: 11px; color: var(--text-2); font-weight: 400; }
   .boll-tick .tick-yield { font-size: 11px; color: var(--text-3); font-weight: 400; }
@@ -86,13 +86,13 @@
   .boll-tick-upper { right: 0; text-align: right; transform: none; }
   .boll-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
   .boll-zone { color: var(--text); font-weight: 600; }
-  .boll-dist { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+  .boll-dist { padding: 3px 10px; border-radius: 3px; font-size: 12px; font-weight: 600; color: #FCFAF3; }
   .boll-dist.down { background: var(--down); }
   .boll-dist.up { background: var(--up); }
 
   /* yield matrix */
   .matrix-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; text-align: center; }
-  .matrix-cell { background: var(--bg); border-radius: 8px; padding: 8px 2px; }
+  .matrix-cell { background: var(--bg); border-radius: 3px; padding: 8px 2px; }
   .matrix-cell .h { font-size: 12px; color: var(--text-2); }
   .matrix-cell .p { font-size: 13px; font-weight: 700; margin-top: 3px; }
   .matrix-cell .pct { font-size: 11px; margin-top: 2px; color: var(--up); }
@@ -102,21 +102,21 @@
   /* add-sim table */
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
-  th { color: var(--text-2); font-weight: 600; background: #fafafa; }
+  th { color: var(--text-2); font-weight: 600; background: #F7F3E9; }
   td input {
-    width: 56px; padding: 5px; border: 1px solid var(--border); border-radius: 6px;
+    width: 56px; padding: 5px; border: 1px solid var(--border); border-radius: 3px;
     text-align: center; font-family: var(--font); font-size: 13px;
   }
   .txt-up { color: var(--up); }
   .txt-down { color: var(--down); }
 
   /* chips */
-  .chip { border:1px solid var(--border); background:#fff; color:var(--text-2); border-radius:16px; padding:4px 12px; font-size:13px; cursor:pointer; font-family:var(--font); line-height:1.4; }
-  .chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .chip { border:1px solid var(--border); background:#FCFAF3; color:var(--text-2); border-radius: 3px; padding:4px 12px; font-size:13px; cursor:pointer; font-family:var(--font); line-height:1.4; }
+  .chip.active { background:var(--primary); color:#FCFAF3; border-color:var(--primary); }
 
   /* history */
   .history-head { display: flex; gap: 16px; margin-bottom: 12px; }
-  .history-head .hi { flex: 1; text-align: center; padding: 12px; background: var(--bg); border-radius: 10px; }
+  .history-head .hi { flex: 1; text-align: center; padding: 12px; background: var(--bg); border-radius: 3px; }
   .history-head .hi .big { font-size: 20px; font-weight: 800; color: var(--primary); }
   .history-head .hi .small { font-size: 12px; color: var(--text-2); margin-top: 2px; }
   .year-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -141,7 +141,7 @@
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
     height: calc(56px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
-    background: #fff; border-top: 1px solid var(--border);
+    background: #FCFAF3; border-top: 1px solid var(--border);
     display: flex; justify-content: space-around; align-items: flex-start;
   }
   .bottom-nav a {
@@ -162,6 +162,44 @@
 </style>
 <!-- 已移除第三方埋点（beacon.cdn.qq.com，未做 SRI 校验）。该脚本与页面同源执行，
      可读取 localStorage 中的 GitHub 令牌与推送 Key，并上报 location.href / document.title。 -->
+<link rel="stylesheet" href="theme.css" />
+<style id="editorial-page-overrides">
+/* 决策矩阵页 */
+.card { background: transparent; border: none; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); border-radius: 0; padding: 16px 0; }
+.stat-row { gap: 0; }
+.boll-title { font-family: var(--font-serif); font-size: 17px; letter-spacing: 1.4px; }
+.boll-tabs { background: transparent; border: 1px solid var(--rule); border-radius: 2px; padding: 0; gap: 0; }
+.boll-tabs button { border-radius: 0; }
+.boll-positions { font-variant-numeric: tabular-nums; }
+.boll-track { background: var(--paper-2); border-radius: 0; height: 10px; }
+.boll-track-lower { background: #E1EDE5; border-radius: 0; }
+.boll-track-upper { background: #F6E4DE; border-radius: 0; }
+.boll-dot { width: 16px; height: 16px; border-radius: 2px; border: 2px solid var(--ink); background: var(--card); }
+.boll-marker-label { font-family: var(--font-mono); letter-spacing: .4px; }
+.boll-tick { font-family: var(--font-mono); font-weight: 700; }
+.boll-dist { border-radius: 2px; }
+.matrix-grid { gap: 3px; }
+.matrix-cell { background: var(--paper-2); border-radius: 0; }
+.chip { border: 1px solid var(--rule); background: transparent; border-radius: 2px; }
+.chip:hover { border-color: var(--ink); color: var(--ink); }
+.year-row { border-bottom: 1px solid var(--rule-2); }
+.history-head { border-bottom: 1px solid var(--rule-2); padding-bottom: 10px; }
+@media (min-width: 900px) {
+  .stat-row { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* 分节标题：报纸栏目签 */
+.section-title {
+  font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: 2.2px;
+  color: var(--ink-3); text-transform: uppercase;
+  display: block; margin: 24px 0 10px; padding-bottom: 7px;
+  border-bottom: 1px solid var(--rule);
+}
+.section-title .sub {
+  display: block; margin-top: 5px; font-size: 10.5px; font-weight: 400;
+  letter-spacing: .3px; text-transform: none; color: var(--ink-3); line-height: 1.6;
+}
+</style>
 </head>
 <body>
   <div class="topbar">
@@ -175,7 +213,30 @@
     </div>
   </div>
 
-  <div class="wrap">
+  <nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" class="icon-fill"><circle cx="12" cy="12" r="6"/></svg>
+    <span>持仓</span>
+  </a>
+  <a href="watchlist.html" class="active">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>自选</span>
+  </a>
+  <a href="returns.html">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>收益</span>
+  </a>
+  <a href="dividend-forecast.html">
+    <svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.7L19.5 10l-5.6 1.3L12 17l-1.9-5.7L4.5 10l5.6-1.3L12 3z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z"/></svg>
+    <span>分红预测</span>
+  </a>
+  <a href="calendar.html">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>日历</span>
+  </a>
+</nav>
+
+<div class="wrap">
     <div class="card">
       <div class="stat-row" id="quickStats"></div>
     </div>
@@ -564,7 +625,7 @@
       }
       const sharesCell = r.isBase
         ? fmt(r.shares,0)
-        : `<input type="number" step="100" value="${r.shares}" data-yield="${r.yield}" style="width:64px;padding:5px;border:1px solid var(--border);border-radius:6px;text-align:center;font-family:var(--font);font-size:13px">`;
+        : `<input type="number" step="100" value="${r.shares}" data-yield="${r.yield}" style="width:64px;padding:5px;border:1px solid var(--border);border-radius: 3px;text-align:center;font-family:var(--font);font-size:13px">`;
       return `<tr>
         <td>${fmt(r.yield,2)}% ${r.isBase?'<span style="font-size:11px;color:var(--text-3)">(成本)</span>':''}</td>
         <td>${CUR}${fmt(r.price, isFundStock(stock)?3:2)}</td>
@@ -704,27 +765,5 @@
     updatePositions();
   })();
 </script>
-<nav class="bottom-nav">
-  <a href="index.html">
-    <svg viewBox="0 0 24 24" class="icon-fill"><circle cx="12" cy="12" r="6"/></svg>
-    <span>持仓</span>
-  </a>
-  <a href="watchlist.html" class="active">
-    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    <span>自选</span>
-  </a>
-  <a href="returns.html">
-    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    <span>收益</span>
-  </a>
-  <a href="dividend-forecast.html">
-    <svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.7L19.5 10l-5.6 1.3L12 17l-1.9-5.7L4.5 10l5.6-1.3L12 3z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z"/></svg>
-    <span>分红预测</span>
-  </a>
-  <a href="calendar.html">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    <span>日历</span>
-  </a>
-</nav>
 </body>
 </html>
