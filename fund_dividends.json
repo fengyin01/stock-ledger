@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-19",
+  "updatedAt": "2026-09-20",
   "source": "eastmoney fundf10 fhsp",
   "funds": {
     "512890": {
@@ -8,7 +8,136 @@
     },
     "513530": {
       "name": "港股通红利ETF华泰柏瑞",
-      "records": []
+      "records": [
+        {
+          "year": "2026",
+          "recordDate": "2026-09-11",
+          "exDate": "2026-09-14",
+          "per10": 0.1,
+          "payDate": "2026-09-21",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-08-14",
+          "exDate": "2026-08-17",
+          "per10": 0.1,
+          "payDate": "2026-08-24",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-07-17",
+          "exDate": "2026-07-20",
+          "per10": 0.1,
+          "payDate": "2026-07-27",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-06-12",
+          "exDate": "2026-06-15",
+          "per10": 0.1,
+          "payDate": "2026-06-23",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-05-15",
+          "exDate": "2026-05-18",
+          "per10": 0.1,
+          "payDate": "2026-05-25",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-04-17",
+          "exDate": "2026-04-20",
+          "per10": 0.1,
+          "payDate": "2026-04-27",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-03-20",
+          "exDate": "2026-03-23",
+          "per10": 0.1,
+          "payDate": "2026-03-30",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-02-25",
+          "exDate": "2026-02-26",
+          "per10": 0.1,
+          "payDate": "2026-03-05",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2026",
+          "recordDate": "2026-01-20",
+          "exDate": "2026-01-21",
+          "per10": 0.1,
+          "payDate": "2026-01-28",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-12-12",
+          "exDate": "2025-12-15",
+          "per10": 0.1,
+          "payDate": "2025-12-22",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-11-14",
+          "exDate": "2025-11-17",
+          "per10": 0.1,
+          "payDate": "2025-11-24",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-10-17",
+          "exDate": "2025-10-20",
+          "per10": 0.1,
+          "payDate": "2025-10-27",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-09-12",
+          "exDate": "2025-09-15",
+          "per10": 0.1,
+          "payDate": "2025-09-22",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-08-15",
+          "exDate": "2025-08-18",
+          "per10": 0.1,
+          "payDate": "2025-08-25",
+          "perUnit": 0.01
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-07-11",
+          "exDate": "2025-07-14",
+          "per10": 0.2,
+          "payDate": "2025-07-21",
+          "perUnit": 0.02
+        },
+        {
+          "year": "2025",
+          "recordDate": "2025-06-13",
+          "exDate": "2025-06-16",
+          "per10": 0.2,
+          "payDate": "2025-06-19",
+          "perUnit": 0.02
+        }
+      ]
     },
     "513630": {
       "name": "港股低波红利ETF摩根",

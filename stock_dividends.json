@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-19",
+  "updatedAt": "2026-09-20",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -21714,6 +21714,16 @@
     "600941": {
       "name": "中国移动",
       "records": [
+        {
+          "ps": 2.5100000000000002,
+          "planText": "10派25.10元(含税,扣税后22.59元)",
+          "planDate": "2026-08-14",
+          "recordDate": "2026-09-29",
+          "exDate": "2026-09-30",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 2.5975369968
+        },
         {
           "ps": 2.2012,
           "planText": "10派22.012元(含税,扣税后19.8108元)",
