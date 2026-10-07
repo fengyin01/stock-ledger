@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-06",
+  "updatedAt": "2026-10-07",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -12610,6 +12610,16 @@
     "600398": {
       "name": "海澜之家",
       "records": [
+        {
+          "ps": 0.27,
+          "planText": "10派2.70元(含税,扣税后2.43元)",
+          "planDate": "2026-04-30",
+          "recordDate": "2026-10-13",
+          "exDate": "2026-10-14",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 4.7787610619
+        },
         {
           "ps": 0.41,
           "planText": "10派4.10元(含税,扣税后3.69元)",
