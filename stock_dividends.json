@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -21143,16 +21143,6 @@
           "progress": "实施分配",
           "reportDate": "1996-12-31",
           "divYield": 0.5924170616
-        },
-        {
-          "ps": null,
-          "planText": "10转10.00",
-          "planDate": "1997-01-09",
-          "recordDate": "1997-01-14",
-          "exDate": "1997-01-15",
-          "progress": "实施分配",
-          "reportDate": "1996-06-30",
-          "divYield": null
         }
       ]
     },
@@ -34326,7 +34316,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.7683465959
+          "divYield": 1.733102253
         },
         {
           "ps": 0.3,
@@ -34343,6 +34333,16 @@
     "002142": {
       "name": "宁波银行",
       "records": [
+        {
+          "ps": 0.4,
+          "planText": "10派4.00元(含税,扣税后3.60元)",
+          "planDate": "2026-08-20",
+          "recordDate": "2026-11-04",
+          "exDate": "2026-11-05",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 1.1435105774999998
+        },
         {
           "ps": 0.9,
           "planText": "10派9.00元(含税,扣税后8.10元)",
@@ -43716,7 +43716,7 @@
           "exDate": "2026-11-04",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 0.6465517241
+          "divYield": 0.6666666667000001
         },
         {
           "ps": 0.2,
@@ -45401,7 +45401,7 @@
           "exDate": "2026-10-30",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 3.423388653
+          "divYield": 3.4141647421
         },
         {
           "ps": 0.379,
@@ -48337,16 +48337,6 @@
           "progress": "实施分配",
           "reportDate": "2011-12-31",
           "divYield": 0.27649769589999995
-        },
-        {
-          "ps": 0.2,
-          "planText": "10送10.00派2.00元(含税,扣税后0.80元)",
-          "planDate": "2011-04-07",
-          "recordDate": "2011-06-16",
-          "exDate": "2011-06-17",
-          "progress": "实施分配",
-          "reportDate": "2010-12-31",
-          "divYield": 0.7270083606000001
         }
       ]
     },
