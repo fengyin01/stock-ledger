@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-12",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -30262,7 +30262,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": 1.4958863126
+          "divYield": null
         },
         {
           "ps": 0.3,
@@ -30272,7 +30272,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": null
+          "divYield": 0.7479431563
         },
         {
           "ps": 0.5,
@@ -33270,6 +33270,16 @@
       "name": "桃李面包",
       "records": [
         {
+          "ps": 0.12,
+          "planText": "10派1.20元(含税,扣税后1.08元)",
+          "planDate": "2026-10-30",
+          "recordDate": "2026-11-18",
+          "exDate": "2026-11-19",
+          "progress": "实施分配",
+          "reportDate": "2026-09-30",
+          "divYield": 2.9629629630000003
+        },
+        {
           "ps": 0.2,
           "planText": "10派2.00元(含税,扣税后1.80元)",
           "planDate": "2026-04-29",
@@ -34296,7 +34306,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6863406408
+          "divYield": 1.7079419299999998
         },
         {
           "ps": 0.3,
