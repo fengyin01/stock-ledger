@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-15",
+  "updatedAt": "2026-11-17",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -8294,16 +8294,6 @@
           "progress": "实施分配",
           "reportDate": "1998-12-31",
           "divYield": 1.1045029737
-        },
-        {
-          "ps": 0.11000000000000001,
-          "planText": "10派1.10元(含税,扣税后0.88元)",
-          "planDate": "1998-05-21",
-          "recordDate": "1998-05-27",
-          "exDate": "1998-05-28",
-          "progress": "实施分配",
-          "reportDate": "1997-12-31",
-          "divYield": 0.9640666082
         }
       ]
     },
@@ -31967,7 +31957,7 @@
           "exDate": "2026-11-20",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.1804511278
+          "divYield": 2.1390937829
         },
         {
           "ps": 0.193,
@@ -33287,7 +33277,7 @@
           "exDate": "2026-11-19",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 3.0150753769
+          "divYield": 2.8708133971
         },
         {
           "ps": 0.2,
@@ -34316,7 +34306,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6570008285
+          "divYield": 1.6260162602000001
         },
         {
           "ps": 0.3,
