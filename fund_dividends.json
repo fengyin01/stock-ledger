@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "source": "eastmoney fundf10 fhsp",
   "funds": {
     "512890": {
@@ -158,6 +158,14 @@
     "513630": {
       "name": "港股低波红利ETF摩根",
       "records": [
+        {
+          "year": "2026",
+          "recordDate": "2026-11-19",
+          "exDate": "2026-11-20",
+          "per10": 0.02,
+          "payDate": "2026-11-27",
+          "perUnit": 0.002
+        },
         {
           "year": "2026",
           "recordDate": "2026-10-20",

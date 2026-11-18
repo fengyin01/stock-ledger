@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -22800,6 +22800,16 @@
       "name": "南京银行",
       "records": [
         {
+          "ps": 0.33121999999999996,
+          "planText": "10派3.3122元(含税,扣税后2.981元)",
+          "planDate": "2026-08-19",
+          "recordDate": "2026-11-24",
+          "exDate": "2026-11-25",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 2.5092424242
+        },
+        {
           "ps": 0.22294999999999998,
           "planText": "10派2.2295元(含税,扣税后2.0066元)",
           "planDate": "2026-04-23",
@@ -30252,7 +30262,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": null
+          "divYield": 1.4958863126
         },
         {
           "ps": 0.3,
@@ -30262,7 +30272,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": 0.7479431563
+          "divYield": null
         },
         {
           "ps": 0.5,
@@ -33277,7 +33287,7 @@
           "exDate": "2026-11-19",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 2.8708133971
+          "divYield": 2.8915662651
         },
         {
           "ps": 0.2,
@@ -34306,7 +34316,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6260162602000001
+          "divYield": 1.6326530612
         },
         {
           "ps": 0.3,
@@ -48343,6 +48353,16 @@
     "000685": {
       "name": "中山公用",
       "records": [
+        {
+          "ps": 0.15,
+          "planText": "10派1.50元(含税,扣税后1.35元)",
+          "planDate": "2026-10-20",
+          "recordDate": "2026-11-24",
+          "exDate": "2026-11-25",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 1.4506769826
+        },
         {
           "ps": 0.385,
           "planText": "10派3.85元(含税,扣税后3.465元)",
