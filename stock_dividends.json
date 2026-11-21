@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-20",
+  "updatedAt": "2026-11-21",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -22807,7 +22807,7 @@
           "exDate": "2026-11-25",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.4997735849
+          "divYield": 2.4810486891
         },
         {
           "ps": 0.22294999999999998,
@@ -27652,7 +27652,7 @@
           "exDate": "2026-11-26",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.1960784314
+          "divYield": 2.1789883268
         },
         {
           "ps": 0.05600000000000001,
@@ -30272,7 +30272,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": null
+          "divYield": 1.4958863126
         },
         {
           "ps": 0.3,
@@ -30282,7 +30282,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": 0.7479431563
+          "divYield": null
         },
         {
           "ps": 0.5,
@@ -34326,7 +34326,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6611295681
+          "divYield": 1.6366612111
         },
         {
           "ps": 0.3,
@@ -40881,7 +40881,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.6888667992
+          "divYield": 2.7009485771
         },
         {
           "ps": 0.512,
@@ -46351,7 +46351,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 1.9946808510999998
+          "divYield": 2.0380434783
         },
         {
           "ps": 0.1,
@@ -48401,7 +48401,7 @@
           "exDate": "2026-11-25",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 1.4591439689
+          "divYield": 1.4851485148999999
         },
         {
           "ps": 0.385,
