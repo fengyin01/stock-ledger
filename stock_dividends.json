@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-22",
+  "updatedAt": "2026-11-24",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -22807,7 +22807,7 @@
           "exDate": "2026-11-25",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.4810486891
+          "divYield": 2.4681073025
         },
         {
           "ps": 0.22294999999999998,
@@ -27652,7 +27652,7 @@
           "exDate": "2026-11-26",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.1789883268
+          "divYield": 2.2134387352
         },
         {
           "ps": 0.05600000000000001,
@@ -30272,7 +30272,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": null
+          "divYield": 1.4958863126
         },
         {
           "ps": 0.3,
@@ -30282,7 +30282,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": 0.7479431563
+          "divYield": null
         },
         {
           "ps": 0.5,
@@ -34326,7 +34326,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6366612111
+          "divYield": 1.6207455429000002
         },
         {
           "ps": 0.3,
@@ -35948,6 +35948,16 @@
     "000333": {
       "name": "美的集团",
       "records": [
+        {
+          "ps": 0.5,
+          "planText": "10派5.00元(含税,扣税后4.50元)",
+          "planDate": "2026-08-29",
+          "recordDate": "2026-11-27",
+          "exDate": "2026-11-30",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 0.5311802826
+        },
         {
           "ps": 3.8,
           "planText": "10派38.00元(含税,扣税后34.20元)",
@@ -40206,7 +40216,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": null
+          "divYield": 0.7927070947000001
         },
         {
           "ps": 0.8,
@@ -40881,7 +40891,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.7009485771
+          "divYield": 2.7616130679
         },
         {
           "ps": 0.512,
@@ -46351,7 +46361,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 2.0380434783
+          "divYield": 2.0174848689
         },
         {
           "ps": 0.1,
@@ -48401,7 +48411,7 @@
           "exDate": "2026-11-25",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 1.4851485148999999
+          "divYield": 1.4895729891
         },
         {
           "ps": 0.385,
