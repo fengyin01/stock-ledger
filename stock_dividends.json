@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26",
+  "updatedAt": "2026-11-27",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -19268,7 +19268,7 @@
           "exDate": "2026-12-03",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 1.8747656543
+          "divYield": 1.8382352941000002
         },
         {
           "ps": 0.21000000000000002,
@@ -29510,6 +29510,16 @@
       "name": "京沪高铁",
       "records": [
         {
+          "ps": 0.0789,
+          "planText": "10派0.789元(含税,扣税后0.7101元)",
+          "planDate": "2026-10-22",
+          "recordDate": "2026-12-02",
+          "exDate": "2026-12-03",
+          "progress": "实施分配",
+          "reportDate": "2026-06-30",
+          "divYield": 1.469273743
+        },
+        {
           "ps": 0.0954,
           "planText": "10派0.954元(含税,扣税后0.8586元)",
           "planDate": "2026-04-21",
@@ -30282,7 +30292,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": 1.4958863126
+          "divYield": null
         },
         {
           "ps": 0.3,
@@ -30292,7 +30302,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": null
+          "divYield": 0.7479431563
         },
         {
           "ps": 0.5,
@@ -34336,7 +34346,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6129032258000002
+          "divYield": 1.6064257028
         },
         {
           "ps": 0.3,
@@ -35966,7 +35976,7 @@
           "exDate": "2026-11-30",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 0.5311238581
+          "divYield": 0.5290445456
         },
         {
           "ps": 3.8,
@@ -40901,7 +40911,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 2.7929788332000003
+          "divYield": 2.7517802645
         },
         {
           "ps": 0.512,
@@ -46371,7 +46381,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 2.0675396278
+          "divYield": 2.0891364903
         },
         {
           "ps": 0.1,
