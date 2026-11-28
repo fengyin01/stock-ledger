@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-27",
+  "updatedAt": "2026-11-28",
   "source": "eastmoney RPT_SHAREBONUS_DET (snapshot)",
   "stocks": {
     "300014": {
@@ -19268,7 +19268,7 @@
           "exDate": "2026-12-03",
           "progress": "实施分配",
           "reportDate": "2026-09-30",
-          "divYield": 1.8382352941000002
+          "divYield": 1.8402649982
         },
         {
           "ps": 0.21000000000000002,
@@ -29517,7 +29517,7 @@
           "exDate": "2026-12-03",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 1.469273743
+          "divYield": 1.4830827067999999
         },
         {
           "ps": 0.0954,
@@ -30292,7 +30292,7 @@
           "exDate": "2015-10-14",
           "progress": "实施分配",
           "reportDate": "2015-06-30",
-          "divYield": null
+          "divYield": 1.4958863126
         },
         {
           "ps": 0.3,
@@ -30302,7 +30302,7 @@
           "exDate": "2015-05-21",
           "progress": "实施分配",
           "reportDate": "2014-12-31",
-          "divYield": 0.7479431563
+          "divYield": null
         },
         {
           "ps": 0.5,
@@ -34346,7 +34346,7 @@
           "exDate": "1992-03-23",
           "progress": "实施分配",
           "reportDate": "1991-12-31",
-          "divYield": 1.6064257028
+          "divYield": 1.6353229763000001
         },
         {
           "ps": 0.3,
@@ -35976,7 +35976,7 @@
           "exDate": "2026-11-30",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": 0.5290445456
+          "divYield": 0.537692225
         },
         {
           "ps": 3.8,
@@ -40236,7 +40236,7 @@
           "exDate": "2026-11-27",
           "progress": "实施分配",
           "reportDate": "2026-06-30",
-          "divYield": null
+          "divYield": 0.8051529790999999
         },
         {
           "ps": 0.8,
